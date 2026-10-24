@@ -1,0 +1,303 @@
+{% extends 'base.html' %}
+
+{% block title %}Gap Analysis & Utilization Dashboard | WelfareConnect{% endblock %}
+
+{% block content %}
+<div class="analytics-page">
+
+  <!-- Header Section -->
+  <div class="dashboard-head">
+    <div>
+      <div class="eyebrow" data-i18n="gap_analysis_eyebrow">WELFARE UTILIZATION GAP ANALYSIS</div>
+      <h1 data-i18n="gap_analysis_title">Welfare Delivery Funnel & Gap Analysis</h1>
+      <p data-i18n="gap_analysis_desc">
+        Comprehensive academic and administrative analysis of citizen dropouts across the 5-stage welfare journey:
+        <strong>Eligible → Aware → Applied → Approved → Received</strong>.
+      </p>
+    </div>
+    <div class="header-badges">
+      <span class="admin-badge">ADMIN ANALYTICS</span>
+      <a href="{{ url_for('main.dashboard') }}" class="small-btn outline-btn">← Back to Overview</a>
+    </div>
+  </div>
+
+  <!-- KPI Stat Grid -->
+  <div class="stat-grid admin-stats">
+    <div class="stat-card">
+      <span data-i18n="eligible_opportunities">01. Eligible Pipeline</span>
+      <strong>{{ counts['Eligible'] }}</strong>
+      <small>Total potential beneficiaries</small>
+    </div>
+
+    <div class="stat-card">
+      <span data-i18n="aware_citizens">02. Aware Citizens</span>
+      <strong>{{ counts['Aware'] }}</strong>
+      <small>Discovered scheme details</small>
+    </div>
+
+    <div class="stat-card">
+      <span data-i18n="applied_candidates">03. Applications Filed</span>
+      <strong>{{ counts['Applied'] }}</strong>
+      <small>Submitted official forms</small>
+    </div>
+
+    <div class="stat-card">
+      <span data-i18n="approved_applicants">04. Verified & Approved</span>
+      <strong>{{ counts['Approved'] }}</strong>
+      <small>Passed department audit</small>
+    </div>
+
+    <div class="stat-card highlight-card">
+      <span data-i18n="received_benefits">05. Benefits Received</span>
+      <strong>{{ counts['Received'] }}</strong>
+      <small>Overall Conversion: <strong>{{ analytics.overall_conversion_rate }}%</strong></small>
+    </div>
+  </div>
+
+  <!-- Bottleneck Alert Banner -->
+  <section class="surface-card bottleneck-card">
+    <div class="bottleneck-header">
+      <div class="bottleneck-icon">⚠️</div>
+      <div>
+        <div class="eyebrow danger-eyebrow">PRIMARY SYSTEM BOTTLENECK DETECTED</div>
+        <h2>Stage Drop-off: {{ bottleneck.stage | replace('_', ' → ') }}</h2>
+        <p class="bottleneck-metric">
+          Drop-off Count: <strong>{{ bottleneck.count }} citizens</strong> lost at this transition
+        </p>
+      </div>
+    </div>
+    <div class="bottleneck-body">
+      <div class="bottleneck-column">
+        <strong>Root Cause Diagnosis:</strong>
+        <p>{{ bottleneck.analysis }}</p>
+      </div>
+      <div class="bottleneck-column">
+        <strong>Policy & Administrative Recommendation:</strong>
+        <p>{{ bottleneck.recommendation }}</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Charts Grid (Plotly) -->
+  <div class="content-grid two-col" style="margin-top: 28px;">
+    <!-- Chart 1: Funnel Waterfall -->
+    <section class="surface-card">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">VISUAL PIPELINE</span>
+          <h2>Utilization Funnel Waterfall</h2>
+          <small class="muted">Interactive retention across all 5 journey milestones</small>
+        </div>
+      </div>
+      <div class="chart-container">
+        {% if charts.funnel_html %}
+          {{ charts.funnel_html | safe }}
+        {% else %}
+          <div class="funnel">
+            {% for s in ['Eligible','Aware','Applied','Approved','Received'] %}
+              <div class="funnel-row">
+                <span>{{ s }}</span>
+                <div><i style="width: {{ ((counts[s] / (counts['Eligible'] or 1)) * 100)|round(0) }}%"></i></div>
+                <strong>{{ counts[s] }}</strong>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- Chart 2: Category Breakdown -->
+    <section class="surface-card">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">SECTOR DISTRIBUTION</span>
+          <h2>Applications by Welfare Category</h2>
+          <small class="muted">Distribution of tracked schemes across sectors</small>
+        </div>
+      </div>
+      <div class="chart-container">
+        {% if charts.category_donut_html %}
+          {{ charts.category_donut_html | safe }}
+        {% else %}
+          <div class="empty-state"><p>Category data will populate as applications are tracked.</p></div>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+
+  <!-- Stage-to-Stage Transition Cards -->
+  <section class="surface-card" style="margin-top: 28px;">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">DROP-OFF MATRIX</span>
+        <h2>Stage-to-Stage Conversion & Dropout Rates</h2>
+        <p class="muted">Step-by-step conversion efficiency showing exact citizen attrition at each milestone.</p>
+      </div>
+    </div>
+
+    <div class="transition-grid">
+      {% for t in transitions %}
+      <div class="transition-card">
+        <div class="transition-head">
+          <span class="transition-step">{{ loop.index }}</span>
+          <div>
+            <h3>{{ t.from_stage }} → {{ t.to_stage }}</h3>
+            <span class="transition-label">{{ t.label }}</span>
+          </div>
+        </div>
+
+        <p class="transition-desc">{{ t.description }}</p>
+
+        <div class="transition-stats">
+          <div class="stat-pill success-pill">
+            <small>Conversion Rate</small>
+            <strong>{{ t.conversion_rate }}%</strong>
+            <span>({{ t.to_count }} / {{ t.from_count }})</span>
+          </div>
+          <div class="stat-pill danger-pill">
+            <small>Dropout Rate</small>
+            <strong>{{ t.drop_rate }}%</strong>
+            <span>(-{{ t.drop_count }} citizens)</span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- Top Schemes Comparison Bar Chart -->
+  {% if charts.scheme_bar_html %}
+  <section class="surface-card" style="margin-top: 28px;">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">SCHEME COMPARISON</span>
+        <h2>Volume Comparison (Applied vs Approved vs Received)</h2>
+        <small class="muted">Top schemes by active citizen participation</small>
+      </div>
+    </div>
+    <div class="chart-container">
+      {{ charts.scheme_bar_html | safe }}
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- Scheme-Wise Detailed Utilization Table -->
+  <section class="surface-card" style="margin-top: 28px;">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">SCHEME-WISE DATA</span>
+        <h2>Scheme Utilization Performance Table</h2>
+        <p class="muted">Granular breakdown of applications, approvals, and benefit receipts for each scheme.</p>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th>Scheme Name</th>
+            <th>Category</th>
+            <th>Applications</th>
+            <th>Approved</th>
+            <th>Received</th>
+            <th>Dropout Gap</th>
+            <th>Completion Rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in scheme_rows %}
+          <tr>
+            <td><strong>{{ s.name }}</strong></td>
+            <td><span class="role-pill">{{ s.category }}</span></td>
+            <td><strong>{{ s.applied }}</strong></td>
+            <td>{{ s.approved }}</td>
+            <td><span class="status status-received">{{ s.received }}</span></td>
+            <td><span class="text-danger">-{{ s.applied - s.received }}</span></td>
+            <td>
+              <div class="progress-cell">
+                <div class="mini-bar"><i style="width: {{ s.conversion_rate }}%"></i></div>
+                <span>{{ s.conversion_rate }}%</span>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7" class="text-center">No scheme applications recorded yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Beneficiary Demographics Section -->
+  <div class="content-grid two-col" style="margin-top: 28px;">
+    <!-- Demographics: Target Groups -->
+    <section class="surface-card">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">DEMOGRAPHICS</span>
+          <h2>Target Beneficiary Distribution</h2>
+        </div>
+      </div>
+      <div class="demo-pills-grid">
+        <div class="demo-pill">
+          <span>🎓 Students</span>
+          <strong>{{ demographic_flags.students }}</strong>
+        </div>
+        <div class="demo-pill">
+          <span>🌱 Farmers</span>
+          <strong>{{ demographic_flags.farmers }}</strong>
+        </div>
+        <div class="demo-pill">
+          <span>👵 Senior Citizens</span>
+          <strong>{{ demographic_flags.seniors }}</strong>
+        </div>
+        <div class="demo-pill">
+          <span>👩 Women Beneficiaries</span>
+          <strong>{{ demographic_flags.women }}</strong>
+        </div>
+      </div>
+    </section>
+
+    <!-- Demographics: Gender Breakdown -->
+    <section class="surface-card">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">INCLUSIVITY</span>
+          <h2>Gender Representation</h2>
+        </div>
+      </div>
+      <div class="demo-pills-grid">
+        {% for gender, count in gender_counts.items() %}
+        <div class="demo-pill">
+          <span>{{ gender }}</span>
+          <strong>{{ count }}</strong>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <!-- Academic Viva Reference Section -->
+  <section class="surface-card academic-card" style="margin-top: 28px;">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">PROJECT ARCHITECTURE & METHODOLOGY</span>
+        <h2>Academic Significance of Welfare Gap Analysis</h2>
+      </div>
+    </div>
+    <div class="academic-text">
+      <p>
+        In public administration, the <strong>Welfare Delivery Gap</strong> refers to the attrition between statutory scheme entitlement and actual citizen benefit receipt. Traditional government portals fail to quantify where citizens abandon the process.
+      </p>
+      <ul>
+        <li><strong>Explainable Rule Engine:</strong> Citizens are evaluated deterministically against age, income ceilings, occupation, and social category criteria, producing transparent reasoning.</li>
+        <li><strong>Pipeline Funnel Model:</strong> Applications are tracked along <em>Eligible → Aware → Applied → Approved → Received</em> to isolate whether failures stem from awareness friction, procedural complexity, or administrative delays.</li>
+        <li><strong>Data Integrity:</strong> All statistics displayed are computed dynamically from real database records (<code>applications</code>, <code>citizens</code>, <code>schemes</code>) rather than mock values.</li>
+      </ul>
+    </div>
+  </section>
+
+</div>
+{% endblock %}

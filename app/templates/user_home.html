@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+
+{% block title %}Home | WelfareConnect{% endblock %}
+
+{% block content %}
+
+<section class="citizen-home">
+
+  <!-- Welcome Header -->
+  <div class="dashboard-head">
+
+    <div>
+      <div class="eyebrow" data-i18n="my_welfare_dashboard">
+        MY WELFARE DASHBOARD
+      </div>
+
+      <h1>{{ citizen.name }}</h1>
+
+      <p data-i18n="home_description">
+        Track your welfare applications, discover suitable schemes,
+        and stay updated on important benefits.
+      </p>
+    </div>
+
+    <a
+      class="notification-card"
+      href="{{ url_for('main.notifications') }}"
+    >
+      <span>🔔</span>
+
+      <div>
+        <strong>{{ notification_count }}</strong>
+        <small data-i18n="notifications">Notifications</small>
+      </div>
+    </a>
+
+  </div>
+
+
+  <!-- Quick Statistics -->
+  <div class="stat-grid user-stats">
+
+    <div class="stat-card">
+      <span>📋 <span data-i18n="tracked_schemes">Tracked Schemes</span></span>
+      <strong>{{ applications|length }}</strong>
+      <small data-i18n="saved_applications">
+        Your saved applications
+      </small>
+    </div>
+
+    <div class="stat-card">
+      <span>📝 <span data-i18n="applied">Applied</span></span>
+      <strong>{{ counts['Applied'] }}</strong>
+      <small data-i18n="applications_submitted">
+        Applications submitted
+      </small>
+    </div>
+
+    <div class="stat-card">
+      <span>✅ <span data-i18n="approved">Approved</span></span>
+      <strong>{{ counts['Approved'] }}</strong>
+      <small data-i18n="applications_approved">
+        Applications approved
+      </small>
+    </div>
+
+    <div class="stat-card">
+      <span>🎁 <span data-i18n="benefits_received">Benefits Received</span></span>
+      <strong>{{ counts['Received'] }}</strong>
+      <small data-i18n="benefits_received_text">
+        Benefits received
+      </small>
+    </div>
+
+  </div>
+
+
+  <!-- Main Dashboard -->
+  <div class="content-grid two-col">
+
+    <!-- Recent Applications -->
+    <section class="surface-card">
+
+      <div class="section-head">
+
+        <div>
+          <span class="eyebrow" data-i18n="application_tracker">
+            APPLICATION TRACKER
+          </span>
+
+          <h2 data-i18n="recent_applications">
+            Your Recent Applications
+          </h2>
+        </div>
+
+        <a
+          href="{{ url_for('main.my_applications') }}"
+          data-i18n="view_all"
+        >
+          View all →
+        </a>
+
+      </div>
+
+
+      {% if applications %}
+
+        <div class="mini-list">
+
+          {% for a in applications %}
+
+            <div class="mini-row">
+
+              <div class="scheme-avatar">
+                {{ scheme_emoji(a.scheme) }}
+              </div>
+
+              <div class="grow">
+
+                <strong>{{ a.scheme.name }}</strong>
+
+                <span>
+                  {{ to_ist(a.created_at).strftime('%d %b %Y · %I:%M %p') if to_ist(a.created_at) else a.created_at.strftime('%d %b %Y') }}
+                </span>
+
+              </div>
+
+              <span class="status status-{{ a.stage|lower }}">
+                {{ a.stage }}
+              </span>
+
+            </div>
+
+          {% endfor %}
+
+        </div>
+
+      {% else %}
+
+        <div class="empty-state">
+
+          <div style="font-size: 42px; margin-bottom: 8px;">
+            🔎
+          </div>
+
+          <strong data-i18n="no_applications">
+            No applications yet
+          </strong>
+
+          <p data-i18n="no_applications_text">
+            Find welfare schemes that match your profile
+            and start your application journey.
+          </p>
+
+          <a
+            class="primary-btn small"
+            href="{{ url_for('main.find_schemes') }}"
+            data-i18n="find_suitable_schemes"
+          >
+            Find Suitable Schemes →
+          </a>
+
+        </div>
+
+      {% endif %}
+
+    </section>
+
+
+    <!-- Find Schemes -->
+    <section class="surface-card accent-panel">
+
+      <div style="font-size: 42px; margin-bottom: 8px;">
+        🎯
+      </div>
+
+      <span class="eyebrow" data-i18n="personalized_discovery">
+        PERSONALIZED DISCOVERY
+      </span>
+
+      <h2 data-i18n="relevant_schemes">
+        Find Welfare Schemes Made Relevant to You
+      </h2>
+
+      <p data-i18n="relevant_schemes_text">
+        Enter your age, income, occupation, category and location
+        to discover welfare schemes that may match your eligibility.
+      </p>
+
+      <a
+        class="primary-btn"
+        href="{{ url_for('main.find_schemes') }}"
+        data-i18n="find_schemes_button"
+      >
+        🔍 Find Suitable Schemes
+      </a>
+
+    </section>
+
+  </div>
+
+
+  <!-- Welfare Journey -->
+  <section class="journey-strip">
+
+    <div>
+      <span class="eyebrow" data-i18n="your_welfare_journey">
+        YOUR WELFARE JOURNEY
+      </span>
+
+      <h2 data-i18n="journey_text">
+        Track your progress from eligibility to benefits
+      </h2>
+    </div>
+
+    <div class="journey-compact">
+
+      {% for s in ['Eligible','Aware','Applied','Approved','Received'] %}
+
+        <span>
+          {% if s == 'Eligible' %}
+            ✓
+          {% elif s == 'Aware' %}
+            👁
+          {% elif s == 'Applied' %}
+            📝
+          {% elif s == 'Approved' %}
+            ✅
+          {% elif s == 'Received' %}
+            🎁
+          {% endif %}
+
+          {{ s }}
+        </span>
+
+        {% if not loop.last %}
+          <i>→</i>
+        {% endif %}
+
+      {% endfor %}
+
+    </div>
+
+  </section>
+
+</section>
+
+{% endblock %}

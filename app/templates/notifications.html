@@ -1,0 +1,442 @@
+{% extends 'base.html' %}
+
+{% block title %}Notifications | WelfareConnect{% endblock %}
+
+{% block content %}
+
+<style>
+
+  .notification-hero {
+    background: linear-gradient(120deg, #f7f5ff 0%, #f0edff 100%);
+    border-radius: 0 0 28px 28px;
+    padding: 44px 0 48px;
+    margin: -32px -32px 38px;
+  }
+
+  .notification-hero-inner {
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 0 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 30px;
+  }
+
+  .notification-hero .eyebrow {
+    font-size: 16px;
+  }
+
+  .notification-hero h1 {
+    margin: 12px 0 14px;
+  }
+
+  .notification-hero p {
+    max-width: 760px;
+    margin: 0;
+    color: #5f6f96;
+    font-size: 18px;
+    line-height: 1.55;
+  }
+
+  .bell-visual {
+    width: 160px;
+    height: 160px;
+    border-radius: 42px;
+    background: #e9e3ff;
+    display: grid;
+    place-items: center;
+    font-size: 76px;
+    flex: 0 0 auto;
+  }
+
+  .notification-section-title {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .notification-section-icon {
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
+    background: #eee9ff;
+    display: grid;
+    place-items: center;
+    font-size: 27px;
+  }
+
+  .notification-section-title h2 {
+    margin: 0 0 3px;
+  }
+
+  .notification-section-title p {
+    margin: 0;
+    color: #7080a4;
+  }
+
+  .notification-preference-card {
+    margin-bottom: 28px;
+  }
+
+  .notification-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 20px 0 0;
+    color: #40537d;
+    font-weight: 500;
+  }
+
+  .notification-checkbox input {
+    width: 22px;
+    height: 22px;
+    accent-color: #5b43e8;
+  }
+
+  .notification-actions {
+    margin-top: 24px;
+  }
+
+  .notification-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .notification-row {
+    display: flex;
+    gap: 16px;
+    padding: 18px;
+    border: 1px solid #eceaf5;
+    border-radius: 18px;
+    background: #fff;
+    transition: all 0.2s ease;
+  }
+
+  .notification-row.clickable {
+    cursor: pointer;
+  }
+
+  .notification-row.clickable:hover {
+    border-color: #cfc7ff;
+    background: #faf9ff;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(91, 67, 232, 0.08);
+  }
+
+  .notification-icon {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    border-radius: 14px;
+    background: #eee9ff;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+  }
+
+  .notification-row strong {
+    color: #17245d;
+  }
+
+  .notification-row p {
+    margin: 5px 0;
+    color: #627296;
+  }
+
+  .notification-row small {
+    color: #8b97b4;
+  }
+
+  .notification-link-text {
+    display: inline-block;
+    margin-top: 8px;
+    color: #5b43e8;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .notification-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #7080a4;
+  }
+
+  @media (max-width: 800px) {
+
+    .notification-hero-inner {
+      align-items: flex-start;
+    }
+
+    .bell-visual {
+      width: 100px;
+      height: 100px;
+      font-size: 48px;
+      border-radius: 28px;
+    }
+
+  }
+
+  @media (max-width: 620px) {
+
+    .notification-hero-inner {
+      padding: 0 20px;
+    }
+
+    .notification-hero {
+      margin-left: -20px;
+      margin-right: -20px;
+    }
+
+    .bell-visual {
+      display: none;
+    }
+
+  }
+
+</style>
+
+<section class="notification-hero">
+
+  <div class="notification-hero-inner">
+
+    <div>
+
+      <div class="eyebrow" data-i18n="stay_informed">
+        🔔 STAY INFORMED. STAY AHEAD
+      </div>
+
+      <h1 data-i18n="notification_preferences">
+        Notification Preferences
+      </h1>
+
+      <p data-i18n="notification_preferences_text">
+        Choose how you want to receive WelfareConnect updates and provide
+        your contact details. You can receive alerts about new welfare
+        schemes and important application updates.
+      </p>
+
+    </div>
+
+    <div class="bell-visual">🔔</div>
+
+  </div>
+
+</section>
+
+
+<section class="surface-card notification-preference-card">
+
+  <div class="notification-section-title">
+
+    <div class="notification-section-icon">👤</div>
+
+    <div>
+
+      <h2 data-i18n="your_contact_details">
+        Your Contact Details
+      </h2>
+
+      <p data-i18n="contact_details_text">
+        Enter your contact information to receive notifications.
+      </p>
+
+    </div>
+
+  </div>
+
+
+  <form method="post"
+        action="{{ url_for('main.update_notification_preferences') }}">
+
+    <div class="form-grid">
+
+      <label>
+
+        📧
+        <span data-i18n="email_address">
+          Email Address
+        </span>
+
+        <input
+          type="email"
+          name="email"
+          value="{{ preference.email if preference else '' }}"
+          placeholder="e.g. yourname@gmail.com"
+        >
+
+      </label>
+
+
+      <label>
+
+        📞
+        <span data-i18n="mobile_number">
+          Mobile Number
+        </span>
+
+        <input
+          type="tel"
+          name="mobile"
+          value="{{ preference.mobile if preference else '' }}"
+          placeholder="e.g. +91 98765 43210"
+        >
+
+      </label>
+
+    </div>
+
+
+    <label class="notification-checkbox">
+
+      <input
+        type="checkbox"
+        name="notifications_enabled"
+        {% if not preference or preference.enabled %}checked{% endif %}
+      >
+
+      <span data-i18n="notification_agreement">
+        I agree to receive WelfareConnect notifications and updates.
+      </span>
+
+    </label>
+
+
+    <div class="notification-actions">
+
+      <button class="primary-btn" type="submit">
+
+        <span data-i18n="save_notification_preferences">
+          Save Notification Preferences
+        </span>
+
+      </button>
+
+    </div>
+
+  </form>
+
+</section>
+
+
+<section class="surface-card">
+
+  <div class="notification-section-title">
+
+    <div class="notification-section-icon">🔔</div>
+
+    <div>
+
+      <h2 data-i18n="your_notifications">
+        Your Notifications
+      </h2>
+
+      <p data-i18n="notifications_description">
+        New scheme alerts and application updates will appear here.
+      </p>
+
+    </div>
+
+  </div>
+
+
+  {% if notifications %}
+
+    <div class="notification-list">
+
+      {% for n in notifications %}
+
+        {% if n.notification_type == 'new_scheme' and n.scheme_id %}
+
+          <a
+            href="{{ url_for('main.scheme_detail', scheme_id=n.scheme_id) }}"
+            style="text-decoration: none; color: inherit;"
+          >
+
+            <div class="notification-row clickable">
+
+              <span class="notification-icon">
+                🆕
+              </span>
+
+              <div class="grow">
+
+                <strong>{{ n.title }}</strong>
+
+                <p>{{ n.message }}</p>
+
+                <small>
+                  {{ to_ist(n.created_at).strftime('%d %b %Y · %I:%M %p') }}
+                </small>
+
+                <span
+                  class="notification-link-text"
+                  data-i18n="view_scheme_details"
+                >
+                  View Scheme Details →
+                </span>
+
+              </div>
+
+            </div>
+
+          </a>
+
+        {% else %}
+
+          <div class="notification-row">
+
+            <span class="notification-icon">
+
+              {% if n.notification_type == 'application_status' %}
+                📋
+              {% else %}
+                🔔
+              {% endif %}
+
+            </span>
+
+
+            <div class="grow">
+
+              <strong>{{ n.title }}</strong>
+
+              <p>{{ n.message }}</p>
+
+              <small>
+                {{ to_ist(n.created_at).strftime('%d %b %Y · %I:%M %p') }}
+              </small>
+
+            </div>
+
+          </div>
+
+        {% endif %}
+
+      {% endfor %}
+
+    </div>
+
+  {% else %}
+
+    <div class="notification-empty">
+
+      <div style="font-size:42px;">🔔</div>
+
+      <h3 data-i18n="no_new_notifications">
+        No new notifications
+      </h3>
+
+      <p data-i18n="no_notifications_text">
+        When a new scheme is added or your application status changes,
+        you will see an alert here.
+      </p>
+
+    </div>
+
+  {% endif %}
+
+</section>
+
+{% endblock %}

@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% block title %}{{ scheme.name }} | WelfareConnect{% endblock %}
+{% block content %}
+
+<div class="detail-hero">
+  <a class="back-link" href="{{ url_for('main.find_schemes') }}" data-i18n="back_to_schemes">
+    ← Back to schemes
+  </a>
+
+  <span class="tag">{{ scheme.category }}</span>
+
+  <h1>{{ scheme_emoji(scheme) }} {{ scheme.name }}</h1>
+
+  <p data-i18n="scheme_detail_description">
+    Review the scheme information, check your profile eligibility status, and proceed to the official government portal.
+  </p>
+</div>
+
+<!-- Citizen Live Eligibility Matching Banner -->
+<section class="surface-card eligibility-banner {% if is_eligible %}eligible-pass{% else %}eligible-fail{% endif %}" style="margin-bottom: 24px;">
+  <div class="eligibility-banner-header">
+    <div class="status-icon-circle">
+      {% if is_eligible %}✅{% else %}⚠️{% endif %}
+    </div>
+    <div>
+      <span class="eyebrow">YOUR PROFILE ELIGIBILITY EVALUATION</span>
+      <h2>
+        {% if is_eligible %}
+          You Qualify for this Scheme
+        {% else %}
+          Profile Attention Required
+        {% endif %}
+      </h2>
+      <p class="muted">
+        {% if is_eligible %}
+          Based on your citizen profile ({{ citizen.age }} yrs, {{ citizen.occupation or 'General' }}, ₹{{ "{:,.0f}".format(citizen.income or 0) }}), you meet all evaluated criteria.
+        {% else %}
+          Reasons: {{ reasons | join('; ') }}
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+  {% if criteria_details %}
+  <div class="criteria-check-grid">
+    {% for key, c in criteria_details.items() %}
+    <div class="criteria-pill {% if c.passed %}passed{% else %}failed{% endif %}">
+      <span class="criteria-icon">{% if c.passed %}✓{% else %}✗{% endif %}</span>
+      <div>
+        <strong>{{ c.label }}</strong>
+        <small>You: {{ c.actual }} | Req: {{ c.required }}</small>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+
+<div class="detail-grid">
+
+  <section class="surface-card">
+    <span class="card-kicker" data-i18n="benefits">BENEFITS</span>
+    <h2 data-i18n="what_you_may_receive">What you may receive</h2>
+    <p>{{ scheme.benefits }}</p>
+  </section>
+
+  <section class="surface-card">
+    <span class="card-kicker" data-i18n="eligibility">OFFICIAL ELIGIBILITY CRITERIA</span>
+    <h2 data-i18n="who_can_apply">Who can apply</h2>
+    <ul class="criteria-list">
+      {% if scheme.min_age or scheme.max_age %}
+        <li>
+          <span data-i18n="age_criteria">Age range:</span>
+          <strong>{{ scheme.min_age or 0 }} to {{ scheme.max_age or 'No upper limit' }} years</strong>
+        </li>
+      {% endif %}
+
+      {% if scheme.income_limit %}
+        <li>
+          <span data-i18n="income_limit">Annual Income limit:</span>
+          <strong>₹{{ "{:,.0f}".format(scheme.income_limit) }}</strong>
+        </li>
+      {% else %}
+        <li>
+          <span data-i18n="income_limit">Income limit:</span>
+          <strong>No income restriction specified</strong>
+        </li>
+      {% endif %}
+
+      {% if scheme.occupation %}
+        <li>
+          <span data-i18n="occupation">Target Occupation:</span>
+          <strong>{{ scheme.occupation }}</strong>
+        </li>
+      {% else %}
+        <li>
+          <span data-i18n="occupation">Occupation:</span>
+          <strong>Open across occupations</strong>
+        </li>
+      {% endif %}
+
+      {% if scheme.state %}
+        <li>
+          <span data-i18n="state_region">State / Coverage:</span>
+          <strong>{{ scheme.state }}</strong>
+        </li>
+      {% else %}
+        <li>
+          <span data-i18n="state_region">Jurisdiction:</span>
+          <strong>All India (National)</strong>
+        </li>
+      {% endif %}
+    </ul>
+  </section>
+
+  <section class="surface-card">
+    <span class="card-kicker" data-i18n="documents">DOCUMENT CHECKLIST</span>
+    <h2 data-i18n="required_documents">Required documents</h2>
+    <ul class="document-list">
+      {% for document in scheme.documents.split(',') %}
+        <li>📄 {{ document.strip() }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="surface-card">
+    <span class="card-kicker" data-i18n="application">APPLICATION INSTRUCTIONS</span>
+    <h2 data-i18n="how_to_proceed">How to proceed</h2>
+    <p>{{ scheme.application_info }}</p>
+
+    {% if scheme.deadline %}
+      <p style="margin-top: 12px;">
+        <strong data-i18n="deadline">Deadline:</strong>
+        <span class="badge-deadline">{{ scheme.deadline }}</span>
+      </p>
+    {% endif %}
+  </section>
+
+</div>
+
+<!-- Official Portal Card -->
+<div class="official-card">
+  <div>
+    <span class="card-kicker" data-i18n="official_portal">VERIFIED GOVERNMENT PORTAL</span>
+    <h2 data-i18n="complete_application_there">Submit official application on government portal.</h2>
+    <p data-i18n="official_portal_description">
+      WelfareConnect provides awareness and tracking. Official submission occurs directly on the state/central portal.
+    </p>
+  </div>
+
+  {% if scheme.official_url %}
+    <a class="primary-btn"
+       href="{{ scheme.official_url }}"
+       target="_blank"
+       rel="noopener noreferrer"
+       data-i18n="open_official_website">
+      Open Official Portal ↗
+    </a>
+  {% else %}
+    <a class="primary-btn outline-btn"
+       href="https://www.myscheme.gov.in"
+       target="_blank"
+       rel="noopener noreferrer">
+      Visit MyScheme Portal ↗
+    </a>
+  {% endif %}
+</div>
+
+<!-- Tracking Card -->
+<div class="track-card">
+  <div>
+    <span class="card-kicker" data-i18n="welfareconnect_tracking">APPLICATION JOURNEY TRACKING</span>
+    <h2 data-i18n="already_applied">Track in Your Welfare Journey</h2>
+    <p data-i18n="tracking_description">
+      Add this scheme to your personal applications dashboard to monitor your journey from Applied to Approved and Received.
+    </p>
+  </div>
+
+  {% if existing_application %}
+    <div class="already-tracked-badge">
+      <span>Currently Tracked: </span>
+      <span class="status status-{{ existing_application.stage|lower }}">{{ existing_application.stage }}</span>
+      <a href="{{ url_for('main.my_applications') }}" class="small-btn">View Status →</a>
+    </div>
+  {% else %}
+    <form method="post" action="{{ url_for('main.apply', scheme_id=scheme.id) }}">
+      <button class="primary-btn" type="submit" data-i18n="mark_as_applied">
+        📋 Add to My Applications →
+      </button>
+    </form>
+  {% endif %}
+</div>
+
+{% endblock %}

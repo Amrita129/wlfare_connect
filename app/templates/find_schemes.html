@@ -1,0 +1,261 @@
+{% extends 'base.html' %}
+
+{% block title %}Find Welfare Schemes | WelfareConnect{% endblock %}
+
+{% block content %}
+<div class="schemes-discovery-page">
+
+  <!-- Header -->
+  <div class="dashboard-head">
+    <div>
+      <div class="eyebrow" data-i18n="scheme_discovery">SCHEME DISCOVERY & MATCHING</div>
+      <h1 data-i18n="find_schemes_title">Explore Welfare Schemes for You</h1>
+      <p data-i18n="find_schemes_description">
+        WelfareConnect checks active government schemes against your profile criteria using explainable eligibility rules.
+      </p>
+    </div>
+    <div class="header-badges">
+      <button class="small-btn outline-btn" onclick="toggleProfileForm()">
+        ⚙️ <span data-i18n="edit_matching_profile">Adjust Profile Filters</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Search & Category Filters Bar -->
+  <div class="surface-card search-filter-card">
+    <form method="get" action="{{ url_for('main.find_schemes') }}" class="scheme-search-form">
+      <div class="search-input-group">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          name="q"
+          placeholder="Search by scheme name, benefits, keywords (e.g. kisan, scholarship, pension)..."
+          value="{{ search_query }}"
+        >
+      </div>
+
+      <div class="category-select-group">
+        <select name="category" onchange="this.form.submit()">
+          {% for cat in categories %}
+            <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>
+              {{ cat }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="search-actions">
+        <button type="submit" class="primary-btn search-btn">
+          <span data-i18n="search">Search</span>
+        </button>
+        {% if search_query or selected_category != 'All' %}
+          <a href="{{ url_for('main.find_schemes') }}" class="small-btn outline-btn">Clear</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <!-- Profile Criteria Collapsible Form -->
+  <div id="profileFormWrapper" class="collapsible-profile-form {% if error %}show{% endif %}" style="display: none; margin-bottom: 28px;">
+    <div class="surface-card">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">PROFILE RECALIBRATION</span>
+          <h2>Update your demographic profile</h2>
+          <small class="muted">Changes here will update your citizen account and refresh all scheme match scores.</small>
+        </div>
+        <button class="modal-close" onclick="toggleProfileForm()">×</button>
+      </div>
+
+      <form method="post" class="profile-form form-grid">
+        <label>
+          <span data-i18n="name">Name</span>
+          <input name="name" value="{{ data.get('name','') }}" required>
+        </label>
+
+        <label>
+          <span data-i18n="age">Age</span>
+          <input type="number" name="age" value="{{ data.get('age','') }}" min="0" max="120" required>
+        </label>
+
+        <label>
+          <span data-i18n="gender">Gender</span>
+          <select name="gender">
+            <option value="" data-i18n="select">Select</option>
+            {% for option in ['Female','Male','Other'] %}
+              <option value="{{ option }}" {% if data.get('gender') == option %}selected{% endif %}>{{ option }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label>
+          <span data-i18n="occupation">Occupation</span>
+          <select name="occupation">
+            <option value="" data-i18n="select">Select</option>
+            {% for option in [
+              'Student',
+              'Farmer',
+              'Salaried Employee',
+              'Self-employed',
+              'Unemployed',
+              'Homemaker',
+              'Daily Wage Worker',
+              'Street Vendor',
+              'Senior Citizen',
+              'Other'
+            ] %}
+              <option value="{{ option }}" {% if data.get('occupation') == option %}selected{% endif %}>{{ option }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label>
+          <span data-i18n="annual_income">Annual Family Income (₹)</span>
+          <input type="number" name="income" value="{{ data.get('income','') }}" min="0" step="1000">
+        </label>
+
+        <label>
+          <span data-i18n="social_category">Social Category</span>
+          <select name="category">
+            <option value="" data-i18n="select">Select</option>
+            {% for option in [
+              'General',
+              'OBC',
+              'SC',
+              'ST',
+              'EWS',
+              'Minority',
+              'Persons with Disability'
+            ] %}
+              <option value="{{ option }}" {% if data.get('category') == option %}selected{% endif %}>{{ option }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label>
+          <span data-i18n="state">State</span>
+          <input name="state" value="{{ data.get('state','Maharashtra') }}">
+        </label>
+
+        <label>
+          <span data-i18n="district">District</span>
+          <input name="district" value="{{ data.get('district','') }}">
+        </label>
+
+        <div class="full">
+          <button class="primary-btn" type="submit">
+            Save & Recalculate Matching Schemes →
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Results Count Header -->
+  <div class="section-head" style="margin-top: 16px;">
+    <div>
+      <span class="eyebrow" data-i18n="results">MATCH RESULTS</span>
+      <h2>
+        {% if search_query %}
+          Schemes matching "{{ search_query }}"
+        {% elif selected_category != 'All' %}
+          {{ selected_category }} Schemes
+        {% else %}
+          Recommended Schemes for Your Profile
+        {% endif %}
+      </h2>
+    </div>
+
+    <span class="muted">
+      <strong>{{ results|length }}</strong> matching
+      · <strong>{{ reviewed_count }}</strong> evaluated
+      {% if selected_category != 'All' %}in {{ selected_category }}{% endif %}
+    </span>
+  </div>
+
+  <!-- Scheme Grid -->
+  {% if results %}
+    <div class="scheme-grid modern-schemes">
+      {% for item in results %}
+        {% set s = item.scheme %}
+        <article class="scheme-card modern-card">
+          <div class="scheme-card-top">
+            <span class="tag">
+              {{ scheme_emoji(s) }} {{ s.category }}
+            </span>
+            <span class="score-badge">
+              🎯 {{ item.match_percentage }}% Match
+            </span>
+          </div>
+
+          <h3>
+            {{ scheme_emoji(s) }} {{ s.name }}
+          </h3>
+
+          <p class="scheme-benefits-text">
+            {{ s.benefits }}
+          </p>
+
+          <!-- Why you qualify pills -->
+          {% if item.reasons %}
+          <div class="reasons-pill-container">
+            {% for r in item.reasons %}
+              <span class="reason-pill">✓ {{ r }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="scheme-card-footer">
+            <a
+              href="{{ url_for('main.scheme_detail', scheme_id=s.id) }}"
+              class="primary-btn small-btn"
+              data-i18n="view_details"
+            >
+              View Eligibility & Apply →
+            </a>
+            {% if s.official_url %}
+              <a
+                href="{{ s.official_url }}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="small-btn outline-btn"
+                title="Official Government Portal"
+              >
+                Official Portal ↗
+              </a>
+            {% endif %}
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state surface-card">
+      <div class="empty-icon">🔍</div>
+      <h3 data-i18n="no_matching_schemes">No matching schemes found</h3>
+      <p data-i18n="no_matching_text">
+        We evaluated all {{ reviewed_count }} schemes against your current profile filters.
+        Try clearing your search query, choosing "All" categories, or updating your demographic details above.
+      </p>
+      <div class="empty-actions" style="margin-top: 16px;">
+        <a href="{{ url_for('main.find_schemes') }}" class="primary-btn">Reset All Filters</a>
+        <button class="secondary-btn" onclick="toggleProfileForm()">Adjust Profile</button>
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleProfileForm() {
+  const el = document.getElementById('profileFormWrapper');
+  if (el.style.display === 'none' || el.style.display === '') {
+    el.style.display = 'block';
+    el.scrollIntoView({ behavior: 'smooth' });
+  } else {
+    el.style.display = 'none';
+  }
+}
+</script>
+{% endblock %}

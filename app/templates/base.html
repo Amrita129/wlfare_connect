@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}WelfareConnect{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <!-- Plotly CDN for interactive visualization -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+.notification-link { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+.notification-badge { position: absolute; top: -7px; right: -9px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 10px; background: #5b43e8; color: white; font-size: 11px; line-height: 18px; text-align: center; font-weight: 700; }
+.language-selector {
+  border: 1px solid #ddd8f5;
+  background: #ffffff;
+  color: #27345f;
+  border-radius: 10px;
+  padding: 7px 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+}
+.language-selector:hover {
+  border-color: #5b43e8;
+}
+.language-selector:focus {
+  border-color: #5b43e8;
+  box-shadow: 0 0 0 3px rgba(91, 67, 232, 0.10);
+}
+</style>
+</head>
+<body class="app-shell">
+{% if session.get('role') %}
+<header class="topbar">
+  <a class="brand" href="{{ url_for('main.user_home') if session.get('role') == 'user' else url_for('main.dashboard') }}">
+    <span class="brand-mark">W</span>
+    <span>Welfare<span>Connect</span></span>
+  </a>
+  <nav class="main-nav">
+    {% if session.get('role') == 'user' %}
+      <a href="{{ url_for('main.user_home') }}" data-i18n="home">Home</a>
+      <a href="{{ url_for('main.find_schemes') }}" data-i18n="schemes">Schemes</a>
+      <a href="{{ url_for('main.my_applications') }}" data-i18n="applications">My Applications</a>
+      <a class="notification-link" href="{{ url_for('main.notifications') }}" aria-label="Notifications">
+        🔔{% if unread_notification_count %}<span class="notification-badge">{{ unread_notification_count }}</span>{% endif %}
+      </a>
+      <a href="{{ url_for('main.profile') }}" data-i18n="profile">Profile</a>
+    {% else %}
+      <a href="{{ url_for('main.dashboard') }}" data-i18n="dashboard">Dashboard</a>
+      <a href="{{ url_for('main.gap_analysis') }}" data-i18n="gap_analysis">Gap Analysis</a>
+      <a href="{{ url_for('main.find_schemes') }}" data-i18n="schemes">Schemes</a>
+      <a href="{{ url_for('main.dashboard') }}#applications" data-i18n="applications">Applications</a>
+    {% endif %}
+    <select id="language-selector" class="language-selector" aria-label="Language">
+      <option value="en">🇬🇧 English</option>
+      <option value="hi">🇮🇳 हिंदी</option>
+      <option value="te">🇮🇳 తెలుగు</option>
+      <option value="or">🇮🇳 ଓଡ଼ିଆ</option>
+      <option value="mr">🇮🇳 मराठी</option>
+    </select>
+    <a class="logout-link" href="{{ url_for('main.logout') }}" data-i18n="logout">Logout</a>
+  </nav>
+</header>
+{% elif request.endpoint != 'main.home' %}
+<header class="topbar">
+  <a class="brand" href="{{ url_for('main.home') }}">
+    <span class="brand-mark">W</span>
+    <span>Welfare<span>Connect</span></span>
+  </a>
+  <nav class="main-nav">
+    <a href="{{ url_for('main.home') }}" data-i18n="home">Home</a>
+    <a href="{{ url_for('main.register') }}" data-i18n="register">Register</a>
+    <a href="{{ url_for('main.home', login='1') }}" data-i18n="login">Login</a>
+    <select id="language-selector" class="language-selector" aria-label="Language">
+      <option value="en">🇬🇧 English</option>
+      <option value="hi">🇮🇳 हिंदी</option>
+      <option value="te">🇮🇳 తెలుగు</option>
+      <option value="or">🇮🇳 ଓଡ଼ିଆ</option>
+      <option value="mr">🇮🇳 मराठी</option>
+    </select>
+  </nav>
+</header>
+{% endif %}
+
+<main class="page-content">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert {{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <span>© 2026 <strong>WelfareConnect</strong> · Welfare Scheme Awareness, Eligibility & Utilization Gap Analysis System</span>
+    <span class="muted">Academic Project · Computer Science Department</span>
+  </div>
+</footer>
+<script src="{{ url_for('static', filename='js/language.js') }}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
+

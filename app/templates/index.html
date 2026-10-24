@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% block title %}WelfareConnect | Welfare Scheme Access & Gap Analysis{% endblock %}
+{% block content %}
+<div class="landing">
+  <header class="landing-nav">
+    <a class="brand" href="{{ url_for('main.home') }}">
+      <span class="brand-mark">W</span>
+      <span>Welfare<span>Connect</span></span>
+    </a>
+    <div class="landing-nav-actions">
+      <select id="landing-language-selector" class="language-selector" aria-label="Language" onchange="changeLanguage(this.value)">
+        <option value="en">🇬🇧 English</option>
+        <option value="hi">🇮🇳 हिंदी</option>
+        <option value="te">🇮🇳 తెలుగు</option>
+        <option value="or">🇮🇳 ଓଡ଼ିଆ</option>
+        <option value="mr">🇮🇳 मराठी</option>
+      </select>
+      <a class="register-nav-link" href="{{ url_for('main.register') }}" data-i18n="register">Register</a>
+      <button class="login-btn" onclick="openLogin()"><span data-i18n="login">Login</span> <span>→</span></button>
+    </div>
+  </header>
+
+  <section class="landing-hero">
+    <div class="hero-copy">
+      <div class="eyebrow" data-i18n="welfare_access_simplified"><span></span> WELFARE ACCESS, SIMPLIFIED</div>
+      <h1 data-i18n="hero_headline">Connect eligible citizens with the <em>right welfare schemes.</em></h1>
+      <p data-i18n="hero_description">
+        Discover personalized government welfare schemes, understand transparent eligibility criteria, apply through verified official portals, and track your journey from awareness to benefits.
+      </p>
+      <div class="hero-cta-group">
+        <a class="primary-btn" href="{{ url_for('main.register') }}">
+          <span data-i18n="get_started_citizen">Get Started as Citizen</span> <span>→</span>
+        </a>
+        <button class="secondary-btn" onclick="openLogin()">
+          <span data-i18n="login_existing">Existing User Login</span>
+        </button>
+      </div>
+      <div class="hero-note">
+        <span class="secure-dot">✓</span>
+        <span data-i18n="hero_note_text">Transparent Matching · 30+ Central & State Schemes · Explainable Rules</span>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="glow"></div>
+      <div class="journey-card">
+        <div class="journey-label" data-i18n="your_welfare_journey">YOUR WELFARE JOURNEY</div>
+        <div class="journey-line">
+          <div class="journey-step active"><b>01</b><span data-i18n="stage_eligible">Eligible</span></div>
+          <i></i><div class="journey-step"><b>02</b><span data-i18n="stage_aware">Aware</span></div>
+          <i></i><div class="journey-step"><b>03</b><span data-i18n="stage_applied">Applied</span></div>
+          <i></i><div class="journey-step"><b>04</b><span data-i18n="stage_approved">Approved</span></div>
+          <i></i><div class="journey-step"><b>05</b><span data-i18n="stage_received">Received</span></div>
+        </div>
+        <div class="journey-message">
+          <strong data-i18n="one_clear_journey">One clear journey.</strong>
+          <span data-i18n="journey_subtitle">From eligibility verification to benefit receipt.</span>
+        </div>
+      </div>
+      <div class="floating-stat">
+        <strong>30+</strong>
+        <span>Curated Welfare Schemes<br>Across 8 National Sectors</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="landing-features">
+    <div>
+      <span class="feature-icon">⌕</span>
+      <h3 data-i18n="feature_discover_title">Personalized Discovery</h3>
+      <p data-i18n="feature_discover_desc">Evaluate your profile criteria against real central and state schemes with match percentage scoring.</p>
+    </div>
+    <div>
+      <span class="feature-icon">✓</span>
+      <h3 data-i18n="feature_understand_title">Transparent Explainability</h3>
+      <p data-i18n="feature_understand_desc">See itemized criteria checks (Age, Income, Occupation) with clear explanations of why you qualify.</p>
+    </div>
+    <div>
+      <span class="feature-icon">📊</span>
+      <h3 data-i18n="feature_analytics_title">Utilization Gap Analysis</h3>
+      <p data-i18n="feature_analytics_desc">Administrative analytics diagnosing dropout stages, conversion rates, and delivery bottlenecks.</p>
+    </div>
+  </section>
+
+  <section class="landing-bottom">
+    <div>
+      <div class="eyebrow">RESEARCH & PUBLIC POLICY IMPACT</div>
+      <h2>Turning scheme availability into meaningful access.</h2>
+    </div>
+    <p>
+      Developed as a Computer Science academic project, WelfareConnect bridges the last-mile awareness deficit while offering administrators empirical funnel metrics on where beneficiaries drop out.
+    </p>
+  </section>
+</div>
+
+<!-- Login Modal -->
+<div class="login-overlay" id="loginModal" onclick="closeOnBackdrop(event)">
+  <div class="login-modal">
+    <button class="modal-close" onclick="closeLogin()">×</button>
+    <div class="login-mark">W</div>
+    <div class="eyebrow" data-i18n="welcome_back">WELCOME BACK</div>
+    <h2 data-i18n="sign_in_title">Sign in to WelfareConnect</h2>
+    <p data-i18n="sign_in_subtitle">Choose your account and continue to your dashboard.</p>
+    
+    <form method="post" action="{{ url_for('main.login') }}">
+      <label>
+        <span data-i18n="email_address">Email address</span>
+        <input type="email" name="username" placeholder="you@example.com" required autocomplete="username">
+      </label>
+      <label>
+        <span data-i18n="password">Password</span>
+        <input type="password" name="password" placeholder="Enter password" required autocomplete="current-password">
+      </label>
+      <button class="primary-btn full-btn" type="submit">
+        <span data-i18n="sign_in_button">Login</span> <span>→</span>
+      </button>
+    </form>
+
+    <div class="modal-register-prompt">
+      <span data-i18n="new_citizen">New citizen?</span>
+      <a href="{{ url_for('main.register') }}" data-i18n="create_citizen_profile">Register a new profile</a>
+    </div>
+
+    <div class="demo-credentials">
+      <strong>Demo Credentials (Instant Access)</strong><br>
+      • <strong>Admin:</strong> <code>admin@welfareconnect.in</code> / <code>admin123</code><br>
+      • <strong>Citizen:</strong> <code>user@welfareconnect.in</code> / <code>user123</code>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function openLogin(){document.getElementById('loginModal').classList.add('show');document.body.classList.add('modal-open');}
+function closeLogin(){document.getElementById('loginModal').classList.remove('show');document.body.classList.remove('modal-open');}
+function closeOnBackdrop(e){if(e.target.id==='loginModal')closeLogin();}
+if(new URLSearchParams(window.location.search).get('login')==='1'){openLogin();}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLogin();});
+
+// Sync landing language selector with localStorage
+document.addEventListener('DOMContentLoaded', () => {
+  const currentLang = localStorage.getItem('welfareconnect-language') || 'en';
+  const landingSel = document.getElementById('landing-language-selector');
+  if (landingSel) landingSel.value = currentLang;
+});
+</script>
+{% endblock %}
+

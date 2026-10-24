@@ -1,0 +1,459 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile | WelfareConnect{% endblock %}
+
+{% block content %}
+
+<section class="profile-page">
+
+    <!-- Profile Header -->
+
+    <div class="profile-hero">
+
+        <div class="profile-avatar">👤</div>
+
+        <div class="profile-intro">
+
+            <div class="eyebrow" data-i18n="my_account">MY ACCOUNT</div>
+
+            <h1>
+                {{ citizen.name or 'Citizen Profile' }}
+            </h1>
+
+            <p data-i18n="profile_description">
+                Manage your personal information and eligibility details
+                to receive better welfare scheme recommendations.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- Personal Information -->
+
+    <section class="profile-section surface-card">
+
+        <div class="profile-section-head">
+
+            <div class="section-icon">👤</div>
+
+            <div>
+
+                <h2 data-i18n="personal_information">
+                    Personal Information
+                </h2>
+
+                <p data-i18n="basic_details">
+                    Basic details about you
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <form method="post" class="profile-form">
+
+            <div class="profile-grid">
+
+                <!-- Full Name -->
+
+                <label>
+
+                    <span data-i18n="full_name">
+                        Full Name
+                    </span>
+
+                    <input
+                        type="text"
+                        name="name"
+                        value="{{ citizen.name }}"
+                        placeholder="Enter your full name"
+                        data-i18n-placeholder="enter_full_name"
+                        required
+                    >
+
+                </label>
+
+
+                <!-- Age -->
+
+                <label>
+
+                    <span data-i18n="age">
+                        Age
+                    </span>
+
+                    <input
+                        type="number"
+                        name="age"
+                        min="0"
+                        max="120"
+                        value="{{ citizen.age }}"
+                        placeholder="Enter your age"
+                        data-i18n-placeholder="enter_age"
+                        required
+                    >
+
+                </label>
+
+
+                <!-- Gender -->
+
+                <label>
+
+                    <span data-i18n="gender">
+                        Gender
+                    </span>
+
+                    <select name="gender">
+
+                        <option
+                            value=""
+                            data-i18n="select_gender"
+                        >
+                            Select gender
+                        </option>
+
+                        <option
+                            value="Female"
+                            data-i18n="gender_female"
+                            {% if citizen.gender == "Female" %}selected{% endif %}
+                        >
+                            Female
+                        </option>
+
+                        <option
+                            value="Male"
+                            data-i18n="gender_male"
+                            {% if citizen.gender == "Male" %}selected{% endif %}
+                        >
+                            Male
+                        </option>
+
+                        <option
+                            value="Other"
+                            data-i18n="gender_other"
+                            {% if citizen.gender == "Other" %}selected{% endif %}
+                        >
+                            Other
+                        </option>
+
+                    </select>
+
+                </label>
+
+
+                <!-- Occupation -->
+
+                <label>
+
+                    <span data-i18n="occupation">
+                        Occupation
+                    </span>
+
+                    <select name="occupation">
+
+                        <option
+                            value=""
+                            data-i18n="select_occupation"
+                        >
+                            Select occupation
+                        </option>
+
+                        <option
+                            value="Student"
+                            data-i18n="occupation_student"
+                            {% if citizen.occupation == "Student" %}selected{% endif %}
+                        >
+                            Student
+                        </option>
+
+                        <option
+                            value="Farmer"
+                            data-i18n="occupation_farmer"
+                            {% if citizen.occupation == "Farmer" %}selected{% endif %}
+                        >
+                            Farmer
+                        </option>
+
+                        <option
+                            value="Salaried Employee"
+                            data-i18n="occupation_salaried"
+                            {% if citizen.occupation == "Salaried Employee" %}selected{% endif %}
+                        >
+                            Salaried Employee
+                        </option>
+
+                        <option
+                            value="Self-employed"
+                            data-i18n="occupation_self_employed"
+                            {% if citizen.occupation == "Self-employed" %}selected{% endif %}
+                        >
+                            Self-employed
+                        </option>
+
+                        <option
+                            value="Unemployed"
+                            data-i18n="occupation_unemployed"
+                            {% if citizen.occupation == "Unemployed" %}selected{% endif %}
+                        >
+                            Unemployed
+                        </option>
+
+                        <option
+                            value="Homemaker"
+                            data-i18n="occupation_homemaker"
+                            {% if citizen.occupation == "Homemaker" %}selected{% endif %}
+                        >
+                            Homemaker
+                        </option>
+
+                        <option
+                            value="Daily Wage Worker"
+                            data-i18n="occupation_daily_wage"
+                            {% if citizen.occupation == "Daily Wage Worker" %}selected{% endif %}
+                        >
+                            Daily Wage Worker
+                        </option>
+
+                        <option
+                            value="Street Vendor"
+                            data-i18n="occupation_street_vendor"
+                            {% if citizen.occupation == "Street Vendor" %}selected{% endif %}
+                        >
+                            Street Vendor
+                        </option>
+
+                        <option
+                            value="Senior Citizen"
+                            data-i18n="occupation_senior_citizen"
+                            {% if citizen.occupation == "Senior Citizen" %}selected{% endif %}
+                        >
+                            Senior Citizen
+                        </option>
+
+                        <option
+                            value="Other"
+                            data-i18n="occupation_other"
+                            {% if citizen.occupation == "Other" %}selected{% endif %}
+                        >
+                            Other
+                        </option>
+
+                    </select>
+
+                </label>
+
+            </div>
+
+
+            <!-- Eligibility Information -->
+
+            <div class="profile-section-head inner-section">
+
+                <div class="section-icon">🎯</div>
+
+                <div>
+
+                    <h2 data-i18n="eligibility_information">
+                        Eligibility Information
+                    </h2>
+
+                    <p data-i18n="eligibility_description">
+                        Used to find welfare schemes relevant to you
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="profile-grid">
+
+                <!-- Annual Family Income -->
+
+                <label>
+
+                    <span data-i18n="annual_income">
+                        Annual Family Income
+                    </span>
+
+                    <input
+                        type="number"
+                        name="income"
+                        min="0"
+                        step="0.01"
+                        value="{{ citizen.income or 0 }}"
+                        placeholder="Enter annual income"
+                        data-i18n-placeholder="enter_annual_income"
+                    >
+
+                </label>
+
+
+                <!-- Social Category -->
+
+                <label>
+
+                    <span data-i18n="social_category">
+                        Social Category
+                    </span>
+
+                    <select name="category">
+
+                        <option
+                            value=""
+                            data-i18n="select_category"
+                        >
+                            Select category
+                        </option>
+
+                        <option
+                            value="General"
+                            data-i18n="category_general"
+                            {% if citizen.category == "General" %}selected{% endif %}
+                        >
+                            General
+                        </option>
+
+                        <option
+                            value="OBC"
+                            data-i18n="category_obc"
+                            {% if citizen.category == "OBC" %}selected{% endif %}
+                        >
+                            OBC
+                        </option>
+
+                        <option
+                            value="SC"
+                            data-i18n="category_sc"
+                            {% if citizen.category == "SC" %}selected{% endif %}
+                        >
+                            SC
+                        </option>
+
+                        <option
+                            value="ST"
+                            data-i18n="category_st"
+                            {% if citizen.category == "ST" %}selected{% endif %}
+                        >
+                            ST
+                        </option>
+
+                        <option
+                            value="EWS"
+                            data-i18n="category_ews"
+                            {% if citizen.category == "EWS" %}selected{% endif %}
+                        >
+                            EWS
+                        </option>
+
+                        <option
+                            value="Minority"
+                            data-i18n="category_minority"
+                            {% if citizen.category == "Minority" %}selected{% endif %}
+                        >
+                            Minority
+                        </option>
+
+                        <option
+                            value="Persons with Disability"
+                            data-i18n="category_pwd"
+                            {% if citizen.category == "Persons with Disability" %}selected{% endif %}
+                        >
+                            Persons with Disability
+                        </option>
+
+                    </select>
+
+                </label>
+
+            </div>
+
+
+            <!-- Location -->
+
+            <div class="profile-section-head inner-section">
+
+                <div class="section-icon">📍</div>
+
+                <div>
+
+                    <h2 data-i18n="location">
+                        Location
+                    </h2>
+
+                    <p data-i18n="location_description">
+                        Your location helps identify region-specific schemes
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="profile-grid">
+
+                <!-- State -->
+
+                <label>
+
+                    <span data-i18n="state">
+                        State
+                    </span>
+
+                    <input
+                        type="text"
+                        name="state"
+                        value="{{ citizen.state or 'Maharashtra' }}"
+                        placeholder="Enter your state"
+                        data-i18n-placeholder="enter_state"
+                    >
+
+                </label>
+
+
+                <!-- District -->
+
+                <label>
+
+                    <span data-i18n="district">
+                        District
+                    </span>
+
+                    <input
+                        type="text"
+                        name="district"
+                        value="{{ citizen.district or '' }}"
+                        placeholder="Enter your district"
+                        data-i18n-placeholder="enter_district"
+                    >
+
+                </label>
+
+            </div>
+
+
+            <!-- Save -->
+
+            <div class="profile-actions">
+
+                <button
+                    class="primary-btn profile-save-btn"
+                    type="submit"
+                    data-i18n="save_changes"
+                >
+                    💾 Save Changes
+                </button>
+
+            </div>
+
+        </form>
+
+    </section>
+
+</section>
+
+{% endblock %}

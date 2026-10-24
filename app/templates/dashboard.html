@@ -1,0 +1,509 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard | WelfareConnect{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-head">
+    <div>
+        <div class="eyebrow">ADMIN CONSOLE</div>
+        <h1>System overview.</h1>
+        <p>Monitor logins, applications, scheme performance and the welfare utilization journey.</p>
+    </div>
+    <div class="header-badges">
+        <a href="{{ url_for('main.gap_analysis') }}" class="primary-btn">📊 Full Gap Analysis & Charts →</a>
+        <span class="admin-badge">ADMIN</span>
+    </div>
+</div>
+
+<div class="stat-grid admin-stats">
+
+    <div class="stat-card">
+        <span>Total Logins</span>
+        <strong>{{ total_logins }}</strong>
+        <small>Recorded sign-ins</small>
+    </div>
+
+    <div class="stat-card">
+        <span>Users Logged In</span>
+        <strong>{{ unique_logins }}</strong>
+        <small>Unique accounts</small>
+    </div>
+
+    <div class="stat-card">
+        <span>Total Applications</span>
+        <strong>{{ applications|length }}</strong>
+        <small>All schemes</small>
+    </div>
+
+    <div class="stat-card">
+        <span>Approved</span>
+        <strong>{{ counts['Approved'] }}</strong>
+        <small>Current status</small>
+    </div>
+
+    <div class="stat-card highlight-card">
+        <span>Benefits Received</span>
+        <strong>{{ counts['Received'] }}</strong>
+        <small>Conversion: <strong>{{ analytics.overall_conversion_rate }}%</strong></small>
+    </div>
+
+</div>
+
+<!-- Bottleneck Summary Callout -->
+{% if analytics.largest_gap.count > 0 %}
+<section class="surface-card bottleneck-callout">
+    <div class="bottleneck-callout-inner">
+        <div class="bottleneck-icon-small">⚠️</div>
+        <div>
+            <strong>Primary Utilization Bottleneck: {{ analytics.largest_gap.stage | replace('_', ' → ') }} ({{ analytics.largest_gap.count }} citizen dropouts)</strong>
+            <p>{{ analytics.largest_gap.analysis }}</p>
+        </div>
+        <a href="{{ url_for('main.gap_analysis') }}" class="small-btn outline-btn">View Full Diagnosis →</a>
+    </div>
+</section>
+{% endif %}
+
+<div class="content-grid two-col admin-grid">
+
+    <section class="surface-card">
+
+        <div class="section-head">
+            <div>
+                <span class="eyebrow">UTILIZATION FUNNEL</span>
+                <h2>Welfare journey</h2>
+            </div>
+            <a href="{{ url_for('main.gap_analysis') }}" class="small-btn">Interactive Charts →</a>
+        </div>
+
+        <div class="funnel">
+
+            {% for s in ['Eligible','Aware','Applied','Approved','Received'] %}
+
+            <div class="funnel-row">
+
+                <span>{{ s }}</span>
+
+                <div>
+                    <i style="width: {{ ((counts[s] / (counts['Eligible'] or 1)) * 100)|round(0) }}%"></i>
+                </div>
+
+                <strong>{{ counts[s] }}</strong>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+    </section>
+
+
+    <section class="surface-card">
+
+        <div class="section-head">
+            <div>
+                <span class="eyebrow">LOGIN ACTIVITY</span>
+                <h2>Who is using the system?</h2>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+
+            <table class="modern-table compact">
+
+                <thead>
+                    <tr>
+                        <th>Account</th>
+                        <th>Role</th>
+                        <th>Logins</th>
+                        <th>Last Login</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for row in user_login_rows %}
+
+                    <tr>
+                        <td>{{ row.username }}</td>
+
+                        <td>
+                            <span class="role-pill">{{ row.role }}</span>
+                        </td>
+
+                        <td>
+                            <strong>{{ row.login_count }}</strong>
+                        </td>
+
+                        <td>
+                            {{ row.last_login.strftime('%d %b %Y · %I:%M %p') }}
+                        </td>
+                    </tr>
+
+                    {% else %}
+
+                    <tr>
+                        <td colspan="4">No login activity yet.</td>
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+</div>
+
+<!-- Scheme Performance Summary Table -->
+<section class="surface-card" style="margin-top: 24px;">
+
+    <div class="section-head">
+        <div>
+            <span class="eyebrow">SCHEME PERFORMANCE</span>
+            <h2>Welfare Schemes Utilization Summary</h2>
+        </div>
+        <a href="{{ url_for('main.gap_analysis') }}" class="small-btn">Detailed Breakdown →</a>
+    </div>
+
+    <div class="table-wrap">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Scheme Name</th>
+                    <th>Applications Tracked</th>
+                    <th>Approved</th>
+                    <th>Benefits Received</th>
+                    <th>Conversion Rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in scheme_rows %}
+                <tr>
+                    <td><strong>{{ row.name }}</strong></td>
+                    <td>{{ row.applied }}</td>
+                    <td>{{ row.approved }}</td>
+                    <td><span class="status status-received">{{ row.received }}</span></td>
+                    <td>
+                        <span class="badge-rate">
+                            {{ ((row.received / (row.applied or 1)) * 100)|round(1) }}%
+                        </span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center">No scheme data recorded yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</section>
+
+
+
+<section class="surface-card" id="applications">
+
+    <div class="section-head">
+
+        <div>
+            <span class="eyebrow">APPLICATION MONITORING</span>
+            <h2>All user applications</h2>
+        </div>
+
+    </div>
+
+    <div class="table-wrap">
+
+        <table class="modern-table">
+
+            <thead>
+                <tr>
+                    <th>Applicant</th>
+                    <th>Scheme</th>
+                    <th>Applied</th>
+                    <th>Status</th>
+                    <th>Update Status</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for a in applications %}
+
+                <tr>
+
+                    <td>
+                        <strong>{{ a.citizen.name }}</strong>
+                    </td>
+
+                    <td>
+                        {{ a.scheme.name }}
+                    </td>
+
+                    <td>
+                        {{ a.created_at.strftime('%d %b %Y · %I:%M %p') }}
+                    </td>
+
+                    <td>
+                        <span class="status status-{{ a.stage|lower }}">
+                            {{ a.stage }}
+                        </span>
+                    </td>
+
+                    <td>
+
+                        <form class="inline-form"
+                              method="post"
+                              action="{{ url_for('main.update_stage', application_id=a.id) }}">
+
+                            <select name="stage">
+
+                                {% for s in ['Eligible','Aware','Applied','Approved','Received'] %}
+
+                                <option value="{{ s }}"
+                                    {% if a.stage == s %}selected{% endif %}>
+                                    {{ s }}
+                                </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                            <button class="small-btn" type="submit">
+                                Save
+                            </button>
+
+                        </form>
+
+                    </td>
+
+                </tr>
+
+                {% else %}
+
+                <tr>
+                    <td colspan="5">No applications yet.</td>
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</section>
+
+
+<!-- ================================
+     PUBLISH NEW SCHEME
+     ================================ -->
+
+<section class="surface-card scheme-publish-section">
+
+    <div class="section-head">
+
+        <div>
+            <span class="eyebrow">SCHEME MANAGEMENT</span>
+
+            <h2>Publish New Scheme</h2>
+
+            <p>
+                Add a new welfare scheme and notify eligible users automatically.
+            </p>
+        </div>
+
+    </div>
+
+
+    <form method="post"
+          action="{{ url_for('main.create_scheme') }}"
+          class="scheme-publish-form">
+
+
+        <div class="scheme-publish-grid">
+
+            <label>
+                <span>Scheme Name</span>
+
+                <input
+                    type="text"
+                    name="name"
+                    placeholder="Enter scheme name"
+                    required
+                >
+            </label>
+
+
+            <label>
+                <span>Category</span>
+
+                <select name="category" required>
+
+                    <option value="">Select category</option>
+
+                    <option>Women & Child</option>
+                    <option>Education & Learning</option>
+                    <option>Health & Wellness</option>
+                    <option>Agriculture & Rural Development</option>
+                    <option>Housing & Basic Needs</option>
+                    <option>Employment & Skills</option>
+                    <option>Social Security</option>
+                    <option>Banking & Financial Inclusion</option>
+
+                </select>
+
+            </label>
+
+
+            <label>
+                <span>Minimum Age</span>
+
+                <input
+                    type="number"
+                    name="min_age"
+                    min="0"
+                    max="120"
+                >
+            </label>
+
+
+            <label>
+                <span>Maximum Age</span>
+
+                <input
+                    type="number"
+                    name="max_age"
+                    min="0"
+                    max="120"
+                >
+            </label>
+
+
+            <label>
+                <span>Annual Income Limit</span>
+
+                <input
+                    type="number"
+                    name="income_limit"
+                    min="0"
+                    step="0.01"
+                >
+            </label>
+
+
+            <label>
+                <span>Target Occupation</span>
+
+                <input
+                    type="text"
+                    name="occupation"
+                    placeholder="Example: Farmer"
+                >
+            </label>
+
+
+            <label>
+                <span>State Coverage</span>
+
+                <input
+                    type="text"
+                    name="state"
+                    placeholder="Example: Maharashtra or All India"
+                >
+            </label>
+
+
+            <label>
+                <span>Application Deadline</span>
+
+                <input
+                    type="text"
+                    name="deadline"
+                    placeholder="Example: 31 March 2027"
+                >
+            </label>
+
+
+            <label>
+                <span>Official Apply URL</span>
+
+                <input
+                    type="url"
+                    name="official_url"
+                    placeholder="https://..."
+                >
+            </label>
+
+        </div>
+
+
+        <div class="scheme-publish-full">
+
+            <label>
+                <span>Benefits</span>
+
+                <textarea
+                    name="benefits"
+                    rows="4"
+                    placeholder="Describe the benefits of this scheme"
+                ></textarea>
+            </label>
+
+        </div>
+
+
+        <div class="scheme-publish-full">
+
+            <label>
+                <span>Documents Required</span>
+
+                <textarea
+                    name="documents"
+                    rows="4"
+                    placeholder="List required documents"
+                ></textarea>
+            </label>
+
+        </div>
+
+
+        <div class="scheme-publish-full">
+
+            <label>
+                <span>How to Apply</span>
+
+                <textarea
+                    name="application_info"
+                    rows="4"
+                    placeholder="Explain how citizens can apply"
+                ></textarea>
+            </label>
+
+        </div>
+
+
+        <div class="scheme-publish-actions">
+
+            <button
+                class="primary-btn"
+                type="submit"
+            >
+                🚀 Publish Scheme & Notify Eligible Users
+            </button>
+
+        </div>
+
+    </form>
+
+</section>
+
+
+{% endblock %}

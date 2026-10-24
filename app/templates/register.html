@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+
+{% block title %}Register | WelfareConnect{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card surface-card">
+    <div class="auth-card-head">
+      <div class="brand-mark auth-mark">W</div>
+      <div class="eyebrow" data-i18n="create_account">CREATE CITIZEN PROFILE</div>
+      <h1 data-i18n="register_title">Register on WelfareConnect</h1>
+      <p data-i18n="register_subtitle">
+        Enter your details to create an account and unlock personalized government welfare scheme recommendations.
+      </p>
+    </div>
+
+    <form method="post" action="{{ url_for('main.register') }}" class="register-form">
+      <!-- Section 1: Account Credentials -->
+      <div class="form-section-title">
+        <span class="step-num">1</span>
+        <span data-i18n="account_credentials">Account & Login Credentials</span>
+      </div>
+
+      <div class="form-grid two-col">
+        <label>
+          <span data-i18n="full_name">Full Name *</span>
+          <input
+            type="text"
+            name="name"
+            placeholder="Enter your full name"
+            value="{{ form_data.get('name', '') }}"
+            required
+            autocomplete="name"
+          >
+        </label>
+
+        <label>
+          <span data-i18n="email_address">Email Address *</span>
+          <input
+            type="email"
+            name="email"
+            placeholder="name@example.com"
+            value="{{ form_data.get('email', '') }}"
+            required
+            autocomplete="email"
+          >
+        </label>
+
+        <label>
+          <span data-i18n="mobile_number">Mobile Number (Optional)</span>
+          <input
+            type="tel"
+            name="mobile"
+            placeholder="e.g. 9876543210"
+            value="{{ form_data.get('mobile', '') }}"
+            autocomplete="tel"
+          >
+        </label>
+
+        <div></div>
+
+        <label>
+          <span data-i18n="password">Password (min 6 characters) *</span>
+          <input
+            type="password"
+            name="password"
+            placeholder="Choose a strong password"
+            minlength="6"
+            required
+            autocomplete="new-password"
+          >
+        </label>
+
+        <label>
+          <span data-i18n="confirm_password">Confirm Password *</span>
+          <input
+            type="password"
+            name="confirm_password"
+            placeholder="Re-enter your password"
+            minlength="6"
+            required
+            autocomplete="new-password"
+          >
+        </label>
+      </div>
+
+      <!-- Section 2: Demographic & Eligibility Profile -->
+      <div class="form-section-title" style="margin-top: 24px;">
+        <span class="step-num">2</span>
+        <span data-i18n="demographic_details">Demographic & Eligibility Information</span>
+      </div>
+
+      <div class="form-grid two-col">
+        <label>
+          <span data-i18n="age">Age (Years) *</span>
+          <input
+            type="number"
+            name="age"
+            min="0"
+            max="120"
+            placeholder="e.g. 21"
+            value="{{ form_data.get('age', '') }}"
+            required
+          >
+        </label>
+
+        <label>
+          <span data-i18n="gender">Gender *</span>
+          <select name="gender" required>
+            <option value="" data-i18n="select">Select Gender</option>
+            {% for g in ['Female', 'Male', 'Other'] %}
+              <option value="{{ g }}" {% if form_data.get('gender') == g %}selected{% endif %}>{{ g }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label>
+          <span data-i18n="occupation">Occupation *</span>
+          <select name="occupation" required>
+            <option value="" data-i18n="select">Select Occupation</option>
+            {% for occ in [
+              'Student',
+              'Farmer',
+              'Salaried Employee',
+              'Self-employed',
+              'Unemployed',
+              'Homemaker',
+              'Daily Wage Worker',
+              'Street Vendor',
+              'Senior Citizen',
+              'Other'
+            ] %}
+              <option value="{{ occ }}" {% if form_data.get('occupation') == occ %}selected{% endif %}>{{ occ }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label>
+          <span data-i18n="annual_income">Annual Family Income (₹)</span>
+          <input
+            type="number"
+            name="income"
+            min="0"
+            step="1000"
+            placeholder="e.g. 150000"
+            value="{{ form_data.get('income', '') }}"
+          >
+        </label>
+
+        <label>
+          <span data-i18n="social_category">Social Category *</span>
+          <select name="category" required>
+            <option value="" data-i18n="select">Select Category</option>
+            {% for cat in [
+              'General',
+              'OBC',
+              'SC',
+              'ST',
+              'EWS',
+              'Minority',
+              'Persons with Disability'
+            ] %}
+              <option value="{{ cat }}" {% if form_data.get('category') == cat %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label>
+          <span data-i18n="state">State *</span>
+          <input
+            type="text"
+            name="state"
+            placeholder="e.g. Maharashtra"
+            value="{{ form_data.get('state', 'Maharashtra') }}"
+            required
+          >
+        </label>
+
+        <label class="full-width">
+          <span data-i18n="district">District</span>
+          <input
+            type="text"
+            name="district"
+            placeholder="e.g. Pune, Mumbai, Nagpur..."
+            value="{{ form_data.get('district', '') }}"
+          >
+        </label>
+      </div>
+
+      <div class="auth-actions" style="margin-top: 28px;">
+        <button type="submit" class="primary-btn full-btn">
+          <span data-i18n="complete_registration">Create Account & Find Schemes →</span>
+        </button>
+      </div>
+    </form>
+
+    <div class="auth-footer-links">
+      <span data-i18n="already_have_account">Already registered?</span>
+      <a href="{{ url_for('main.home', login='1') }}" data-i18n="login_here">Sign in here</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

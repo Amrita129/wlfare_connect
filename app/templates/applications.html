@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block title %}My Applications | WelfareConnect{% endblock %}
+
+{% block content %}
+<div class="applications-page">
+
+  <!-- Header -->
+  <div class="dashboard-head">
+    <div>
+      <div class="eyebrow" data-i18n="my_applications">MY WELFARE JOURNEY</div>
+      <h1 data-i18n="applications_title">Tracked Applications & Status</h1>
+      <p data-i18n="applications_subtitle">
+        Monitor your progress from application submission through administrative approval and final benefit disbursement.
+      </p>
+    </div>
+    <a class="primary-btn" href="{{ url_for('main.find_schemes') }}">
+      + <span data-i18n="find_more_schemes">Find More Schemes</span>
+    </a>
+  </div>
+
+  <!-- Filter Tabs -->
+  <div class="filter-tabs-bar">
+    <a href="{{ url_for('main.my_applications') }}" class="filter-tab {% if status_filter == 'All' %}active{% endif %}">
+      All ({{ total_count }})
+    </a>
+    {% for s in stages %}
+      <a href="{{ url_for('main.my_applications', status=s) }}" class="filter-tab {% if status_filter == s %}active{% endif %}">
+        {{ s }} ({{ stage_counts.get(s, 0) }})
+      </a>
+    {% endfor %}
+  </div>
+
+  <!-- Applications List / Cards -->
+  <section class="surface-card" style="margin-top: 18px;">
+    {% if applications %}
+      <div class="applications-cards-list">
+        {% for a in applications %}
+        <article class="application-item-card">
+          <div class="app-card-header">
+            <div class="app-scheme-info">
+              <span class="scheme-avatar">{{ scheme_emoji(a.scheme) }}</span>
+              <div>
+                <h3>{{ a.scheme.name }}</h3>
+                <span class="tag">{{ a.scheme.category }}</span>
+              </div>
+            </div>
+
+            <div class="app-status-badge">
+              <span class="status status-{{ a.stage|lower }}">{{ a.stage }}</span>
+              <small class="muted">
+                Applied: {{ a.created_at.strftime('%d %b %Y') }} at {{ to_ist(a.created_at).strftime('%I:%M %p') }} IST
+              </small>
+            </div>
+          </div>
+
+          <!-- 5-Stage Stepper Tracker -->
+          <div class="stepper-tracker">
+            {% set stage_names = ['Eligible', 'Aware', 'Applied', 'Approved', 'Received'] %}
+            {% set current_idx = stage_names.index(a.stage) if a.stage in stage_names else 2 %}
+            <div class="stepper-track">
+              {% for s in stage_names %}
+                {% set s_idx = loop.index0 %}
+                <div class="step-point {% if s_idx <= current_idx %}completed{% endif %} {% if s_idx == current_idx %}current{% endif %}">
+                  <div class="step-circle">
+                    {% if s_idx < current_idx %}✓{% else %}{{ loop.index }}{% endif %}
+                  </div>
+                  <span class="step-name">{{ s }}</span>
+                </div>
+                {% if not loop.last %}
+                  <div class="step-line {% if s_idx < current_idx %}filled{% endif %}"></div>
+                {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="app-card-footer">
+            <div class="app-footer-left">
+              {% if a.stage == 'Received' %}
+                <span class="text-success">🎉 Beneficiary status complete! Benefits disbursed.</span>
+              {% elif a.stage == 'Approved' %}
+                <span class="text-info">✅ Application approved by authority! Awaiting payment transfer.</span>
+              {% elif a.stage == 'Applied' %}
+                <span class="text-muted">⏳ Under administrative review and verification.</span>
+              {% else %}
+                <span class="text-muted">Current Stage: {{ a.stage }}</span>
+              {% endif %}
+            </div>
+            <div class="app-footer-actions">
+              <a href="{{ url_for('main.scheme_detail', scheme_id=a.scheme.id) }}" class="small-btn outline-btn">
+                View Scheme Details →
+              </a>
+              {% if a.scheme.official_url %}
+                <a href="{{ a.scheme.official_url }}" target="_blank" rel="noopener noreferrer" class="small-btn">
+                  Official Portal ↗
+                </a>
+              {% endif %}
+            </div>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <h3 data-i18n="no_applications_found">No applications in this category</h3>
+        <p data-i18n="no_applications_desc">
+          {% if status_filter != 'All' %}
+            You have no applications currently marked as <strong>{{ status_filter }}</strong>.
+          {% else %}
+            You haven't tracked any welfare schemes yet. Discover eligible schemes to start your journey.
+          {% endif %}
+        </p>
+        <div class="empty-actions" style="margin-top: 16px;">
+          <a class="primary-btn" href="{{ url_for('main.find_schemes') }}" data-i18n="explore_schemes">
+            Explore Suitable Schemes →
+          </a>
+        </div>
+      </div>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}
