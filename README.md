@@ -158,4 +158,4 @@ When demonstrating this project during your viva examination:
 1. **Explain the Funnel:** Show how citizen attrition is mapped from *Eligible* to *Received*, quantifying where policy execution fails.
 2. **Demonstrate Bottleneck Analysis:** Point out the largest dropout stage and how the system generates actionable administrative recommendations.
 3. **Show Explainability:** Open any scheme detail page to demonstrate the live itemized criteria evaluation comparing the citizen's profile against official criteria.
-4. **Show Multilingual Accessibility:** Switch languages in real time (e.g. to Hindi or Marathi) to demonstrate inclusivity for rural citizens.
+4. **Show Multilingual Accessibility:** Switch languages in real time (e.g. to Hindi or Marathi) to demonstrate inclusivity for rural citizens...
