@@ -27,3 +27,5 @@ legacy_backups/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+instance/.secret_key
