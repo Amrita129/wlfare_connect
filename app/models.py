@@ -142,6 +142,28 @@ class LoginLog(db.Model):
     )
 
 
+class ActivityLog(db.Model):
+    __tablename__ = "activity_logs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    event_type = db.Column(db.String(50), nullable=False)
+    description = db.Column(db.String(255), nullable=True)
+    metadata_json = db.Column(db.Text, nullable=True)
+    ip_address = db.Column(db.String(45), nullable=True)
+    created_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    user = db.relationship("User", backref=db.backref("activities", lazy="dynamic"))
+
+
 class NotificationPreference(db.Model):
     __tablename__ = "notification_preferences"
 

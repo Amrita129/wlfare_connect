@@ -1,3 +1,7 @@
+import os
+import sys
+import click
+import getpass
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from config import Config
@@ -6,9 +10,16 @@ from config import Config
 db = SQLAlchemy()
 
 
-def create_app():
+def create_app(config_class=None, config_overrides=None):
     app = Flask(__name__)
-    app.config.from_object(Config)
+    if config_class is None:
+        app.config.from_object(Config)
+    else:
+        app.config.from_object(config_class)
+
+    if config_overrides:
+        app.config.update(config_overrides)
+
     db.init_app(app)
 
     with app.app_context():
@@ -20,19 +31,61 @@ def create_app():
     from .routes import main
     app.register_blueprint(main)
 
+    register_cli_commands(app)
+
     return app
+
+
+def register_cli_commands(app):
+    @app.cli.command("set-password")
+    @click.argument("email")
+    @click.option("--password", "-p", default=None, help="New password (prompted securely if omitted)")
+    def set_password_command(email, password):
+        """Securely update the password for an existing user account."""
+        from werkzeug.security import generate_password_hash
+        from .models import User, ActivityLog
+
+        email_clean = email.strip().lower()
+        user = User.query.filter_by(email=email_clean).first()
+        if not user:
+            click.echo(f"Error: User with email '{email_clean}' not found.", err=True)
+            sys.exit(1)
+
+        if not password:
+            password = getpass.getpass(f"Enter new password for {email_clean}: ")
+            confirm = getpass.getpass("Confirm new password: ")
+            if password != confirm:
+                click.echo("Error: Passwords do not match.", err=True)
+                sys.exit(1)
+
+        if len(password) < 6:
+            click.echo("Error: Password must be at least 6 characters long.", err=True)
+            sys.exit(1)
+
+        user.password_hash = generate_password_hash(password)
+        log = ActivityLog(
+            user_id=user.id,
+            event_type="password_change",
+            description="Password updated via CLI management command.",
+        )
+        db.session.add(log)
+        db.session.commit()
+        click.echo(f"Success: Password for {email_clean} has been updated successfully.")
 
 
 def init_default_users():
     from werkzeug.security import generate_password_hash
     from .models import User, Citizen
 
+    admin_pw = os.getenv("ADMIN_PASSWORD", "admin123")
+    demo_pw = os.getenv("DEMO_USER_PASSWORD", "user123")
+
     # Ensure admin user exists
     admin = User.query.filter_by(email="admin@welfareconnect.in").first()
     if not admin:
         admin = User(
             email="admin@welfareconnect.in",
-            password_hash=generate_password_hash("admin123"),
+            password_hash=generate_password_hash(admin_pw),
             name="System Administrator",
             role="admin",
         )

@@ -1,3 +1,4 @@
+import time
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -23,12 +24,55 @@ from .models import (
     Notification,
     NotificationPreference,
     User,
+    ActivityLog,
     STAGES,
 )
-from .services import analytics_payload, check_eligibility, rank_schemes
+from .services import (
+    analytics_payload,
+    check_eligibility,
+    rank_schemes,
+    admin_overview,
+    log_activity,
+)
 
 
 main = Blueprint("main", __name__)
+
+
+# -------------------------------------------------------------------
+# IN-MEMORY FAILED LOGIN TRACKER (BRUTE FORCE DEFENSE)
+# -------------------------------------------------------------------
+LOGIN_ATTEMPTS = {}  # key: "ip:identifier" -> list of timestamps
+
+
+def get_client_ip():
+    """Retrieve client IP address safely, checking proxy headers."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.remote_addr or "127.0.0.1"
+
+
+def check_login_rate_limit(key):
+    """Return True if rate limit is exceeded (> 5 failed attempts in 5 minutes)."""
+    now = time.time()
+    attempts = LOGIN_ATTEMPTS.get(key, [])
+    # Keep attempts from last 300 seconds (5 minutes)
+    attempts = [t for t in attempts if now - t < 300]
+    LOGIN_ATTEMPTS[key] = attempts
+    return len(attempts) >= 5
+
+
+def record_failed_login(key):
+    now = time.time()
+    attempts = LOGIN_ATTEMPTS.get(key, [])
+    attempts = [t for t in attempts if now - t < 300]
+    attempts.append(now)
+    LOGIN_ATTEMPTS[key] = attempts
+
+
+def clear_login_attempts(key):
+    LOGIN_ATTEMPTS.pop(key, None)
 
 
 @main.app_template_global()
@@ -103,7 +147,6 @@ IST = ZoneInfo("Asia/Kolkata")
 
 def to_ist(dt):
     """Convert a database UTC timestamp to India Standard Time."""
-
     if dt is None:
         return None
 
@@ -111,40 +154,6 @@ def to_ist(dt):
         dt = dt.replace(tzinfo=timezone.utc)
 
     return dt.astimezone(IST)
-
-
-@main.app_context_processor
-def inject_global_data():
-    citizen_id = session.get("citizen_id")
-    unread = 0
-    if citizen_id:
-        unread = Notification.query.filter_by(
-            citizen_id=citizen_id,
-            is_read=False,
-        ).count()
-    return {
-        "unread_notification_count": unread,
-        "current_user_name": session.get("display_name", "User"),
-        "user_role": session.get("role"),
-    }
-
-
-# -------------------------------------------------------------------
-# DEMO USERS
-# -------------------------------------------------------------------
-
-DEMO_USERS = {
-    "admin@welfareconnect.in": {
-        "password": "admin123",
-        "role": "admin",
-        "name": "System Administrator",
-    },
-    "user@welfareconnect.in": {
-        "password": "user123",
-        "role": "user",
-        "name": "WelfareConnect User",
-    },
-}
 
 
 # -------------------------------------------------------------------
@@ -194,36 +203,108 @@ def parse_citizen_form(form):
 
 
 # -------------------------------------------------------------------
-# SESSION HELPERS
+# SESSION & AUTH HELPERS (DATABASE-VERIFIED)
 # -------------------------------------------------------------------
 
+def get_current_user():
+    """
+    Retrieve currently authenticated User model instance from active database.
+    Validates user exists and re-syncs session role and display name.
+    """
+    user_id = session.get("user_id")
+    if not user_id:
+        username = session.get("username")
+        if username:
+            user = User.query.filter_by(email=username).first()
+            if user:
+                session["user_id"] = user.id
+                session["role"] = user.role
+                session["display_name"] = user.name
+                return user
+        return None
+
+    user = db.session.get(User, user_id)
+    if not user:
+        session.clear()
+        return None
+
+    session["role"] = user.role
+    session["display_name"] = user.name
+    return user
+
+
 def logged_in():
-    return "role" in session
+    return get_current_user() is not None
 
 
 def current_citizen():
-    citizen_id = session.get("citizen_id")
-
-    if not citizen_id:
+    """
+    Retrieve citizen profile belonging strictly to the authenticated user.
+    If the user does not yet have a citizen profile, a dedicated profile is created for them.
+    Never associates a user with another person's profile or a generic placeholder.
+    """
+    user = get_current_user()
+    if not user:
         return None
 
-    return db.session.get(Citizen, citizen_id)
+    if user.citizen_id:
+        cit = db.session.get(Citizen, user.citizen_id)
+        if cit:
+            return cit
+
+    # Create a dedicated citizen profile for this specific user
+    cit = Citizen(
+        name=user.name,
+        age=21,
+        gender=None,
+        occupation="Student",
+        income=0,
+        category="General",
+        state="Maharashtra",
+        district=None,
+        student=True,
+        farmer=False,
+        senior_citizen=False,
+        woman=False,
+    )
+    db.session.add(cit)
+    db.session.flush()
+    user.citizen_id = cit.id
+    db.session.commit()
+    session["citizen_id"] = cit.id
+    return cit
 
 
 def require_user():
-    if session.get("role") != "user":
+    user = get_current_user()
+    if not user or user.role not in ["user", "admin"]:
         flash("Please log in as a citizen to continue.", "error")
         return redirect(url_for("main.home", login="1"))
-
     return None
 
 
 def require_admin():
-    if session.get("role") != "admin":
+    user = get_current_user()
+    if not user or user.role != "admin":
         flash("Admin access is required.", "error")
         return redirect(url_for("main.home", login="1"))
-
     return None
+
+
+@main.app_context_processor
+def inject_global_data():
+    user = get_current_user()
+    unread = 0
+    if user and user.citizen_id:
+        unread = Notification.query.filter_by(
+            citizen_id=user.citizen_id,
+            is_read=False,
+        ).count()
+    return {
+        "unread_notification_count": unread,
+        "current_user_name": user.name if user else "User",
+        "user_role": user.role if user else None,
+    }
 
 
 # -------------------------------------------------------------------
@@ -246,84 +327,82 @@ def home():
 def login():
     if request.method == "GET":
         if logged_in():
-            if session.get("role") == "admin":
+            user = get_current_user()
+            if user and user.role == "admin":
                 return redirect(url_for("main.dashboard"))
             return redirect(url_for("main.user_home"))
         return redirect(url_for("main.home", login="1"))
 
-    username = request.form.get("username", "").strip().lower()
+    username = (request.form.get("username") or request.form.get("email") or "").strip().lower()
     password = request.form.get("password", "")
+    ip = get_client_ip()
+    rate_key = f"{ip}:{username}"
 
-    # Look up registered user from persistent database
+    # Brute-force rate limiting check
+    if check_login_rate_limit(rate_key):
+        log_activity(
+            "login_throttled",
+            description=f"Throttled login attempt for {username[:3]}*** from {ip}",
+            ip_address=ip,
+        )
+        flash("Too many failed login attempts. Please wait 5 minutes before trying again.", "error")
+        return redirect(url_for("main.home", login="1"))
+
+    # Look up user from persistent database
     user = User.query.filter_by(email=username).first()
     authenticated = False
-    role = None
-    display_name = None
-    citizen_id = None
 
     if user and check_password_hash(user.password_hash, password):
         authenticated = True
-        role = user.role
-        display_name = user.name
-        citizen_id = user.citizen_id
-    elif username in DEMO_USERS and DEMO_USERS[username]["password"] == password:
-        # Fallback for demo users
-        authenticated = True
-        role = DEMO_USERS[username]["role"]
-        display_name = DEMO_USERS[username]["name"]
 
     if not authenticated:
+        record_failed_login(rate_key)
+        log_activity(
+            "login_failure",
+            user_id=(user.id if user else None),
+            description=f"Failed login attempt for identifier: {username[:3]}***" if username else "Empty login identifier",
+            ip_address=ip,
+        )
         flash("Invalid email or password. Please try again.", "error")
         return redirect(url_for("main.home", login="1"))
 
+    # Authentication succeeded: clear rate limiter
+    clear_login_attempts(rate_key)
+
     session.clear()
-    session["username"] = username
-    session["role"] = role
-    session["display_name"] = display_name
+    session["user_id"] = user.id
+    session["username"] = user.email
+    session["role"] = user.role
+    session["display_name"] = user.name
+    if user.citizen_id:
+        session["citizen_id"] = user.citizen_id
 
     db.session.add(
         LoginLog(
-            username=username,
-            role=role,
+            username=user.email,
+            role=user.role,
         )
     )
+    db.session.commit()
 
-    if role == "user":
-        if not citizen_id:
-            citizen = Citizen.query.filter_by(name="WelfareConnect User").first()
-            if not citizen:
-                citizen = Citizen(
-                    name=display_name or "WelfareConnect User",
-                    age=21,
-                    gender="Female",
-                    occupation="Student",
-                    income=0,
-                    category="General",
-                    state="Maharashtra",
-                    district=None,
-                    student=True,
-                    farmer=False,
-                    senior_citizen=False,
-                    woman=True,
-                )
-                db.session.add(citizen)
-                db.session.flush()
-            citizen_id = citizen.id
-            if user:
-                user.citizen_id = citizen_id
+    log_activity(
+        "login_success",
+        user_id=user.id,
+        description=f"Successful sign-in as {user.role}",
+        ip_address=ip,
+    )
 
-        session["citizen_id"] = citizen_id
-        db.session.commit()
-        flash(f"Welcome back, {display_name}!", "success")
-        return redirect(url_for("main.user_home"))
-
-    if role == "admin":
-        db.session.commit()
-        flash(f"Welcome to Admin Portal, {display_name}!", "success")
+    if user.role == "admin":
+        flash(f"Welcome to Admin Portal, {user.name}!", "success")
         return redirect(url_for("main.dashboard"))
 
-    db.session.commit()
-    return redirect(url_for("main.home"))
+    # Citizen user flow
+    # Ensure citizen profile exists and is linked
+    if not user.citizen_id:
+        current_citizen()
+
+    flash(f"Welcome back, {user.name}!", "success")
+    return redirect(url_for("main.user_home"))
 
 
 # -------------------------------------------------------------------
@@ -333,19 +412,30 @@ def login():
 @main.route("/register", methods=["GET", "POST"])
 def register():
     if logged_in():
-        if session.get("role") == "admin":
+        user = get_current_user()
+        if user and user.role == "admin":
             return redirect(url_for("main.dashboard"))
         return redirect(url_for("main.user_home"))
 
     if request.method == "POST":
-        email = request.form.get("email", "").strip().lower()
+        email = (request.form.get("email") or "").strip().lower()
         password = request.form.get("password", "")
         confirm_password = request.form.get("confirm_password", "")
-        name = request.form.get("name", "").strip()
+        name = (request.form.get("name") or "").strip()
 
         # Input validations
-        if not email or "@" not in email or "." not in email.split("@")[-1]:
+        if not email or "@" not in email:
             flash("Please enter a valid email address.", "error")
+            return render_template("register.html", form_data=request.form)
+
+        email_parts = email.split("@")
+        if len(email_parts) != 2 or not email_parts[0] or "." not in email_parts[1]:
+            flash("Please enter a valid email address.", "error")
+            return render_template("register.html", form_data=request.form)
+
+        domain_parts = email_parts[1].split(".")
+        if len(domain_parts) >= 2 and domain_parts[-1] == domain_parts[-2]:
+            flash("Email address appears invalid (duplicated extension). Please verify.", "error")
             return render_template("register.html", form_data=request.form)
 
         if len(password) < 6:
@@ -379,6 +469,7 @@ def register():
                 citizen_id=citizen.id,
             )
             db.session.add(user)
+            db.session.flush()
 
             mobile = request.form.get("mobile", "").strip() or None
             pref = NotificationPreference(
@@ -400,7 +491,16 @@ def register():
             db.session.add(LoginLog(username=email, role="user"))
             db.session.commit()
 
+            ip = get_client_ip()
+            log_activity(
+                "registration_success",
+                user_id=user.id,
+                description="New citizen profile and account created",
+                ip_address=ip,
+            )
+
             session.clear()
+            session["user_id"] = user.id
             session["username"] = email
             session["role"] = "user"
             session["display_name"] = name
@@ -409,9 +509,13 @@ def register():
             flash(f"Account registered successfully! Welcome to WelfareConnect, {name}.", "success")
             return redirect(url_for("main.find_schemes"))
 
-        except Exception as exc:
+        except (ValueError, TypeError) as val_err:
             db.session.rollback()
-            flash(f"Registration failed: {str(exc)}", "error")
+            flash(f"Registration validation error: {str(val_err)}", "error")
+            return render_template("register.html", form_data=request.form)
+        except Exception:
+            db.session.rollback()
+            flash("An unexpected error occurred during registration. Please try again.", "error")
             return render_template("register.html", form_data=request.form)
 
     return render_template("register.html", form_data={})
@@ -423,14 +527,15 @@ def register():
 
 @main.get("/logout")
 def logout():
+    user = get_current_user()
+    if user:
+        ip = get_client_ip()
+        log_activity("logout", user_id=user.id, description="User signed out", ip_address=ip)
+
     session.clear()
-
-    flash(
-        "You have been logged out successfully.",
-        "success",
-    )
-
+    flash("You have been logged out successfully.", "success")
     return redirect(url_for("main.home"))
+
 
 
 # -------------------------------------------------------------------
@@ -514,6 +619,14 @@ def update_profile():
 
         db.session.commit()
 
+        user = get_current_user()
+        log_activity(
+            "profile_updated",
+            user_id=user.id if user else None,
+            description="Citizen profile details updated",
+            ip_address=get_client_ip(),
+        )
+
         flash(
             "Profile updated successfully.",
             "success",
@@ -576,6 +689,15 @@ def notifications():
         item.is_read = True
 
     db.session.commit()
+
+    user = get_current_user()
+    log_activity(
+        "notifications_viewed",
+        user_id=user.id if user else None,
+        description="Viewed notification center",
+        ip_address=get_client_ip(),
+    )
+
 
     return render_template(
         "notifications.html",
@@ -716,6 +838,15 @@ def find_schemes():
         "district": citizen.district or "",
     }
 
+    user = get_current_user()
+    if search_query or (selected_category and selected_category != "All"):
+        log_activity(
+            "scheme_search",
+            user_id=user.id if user else None,
+            description=f"Search: '{search_query}', Category: '{selected_category or 'All'}'",
+            ip_address=get_client_ip(),
+        )
+
     return render_template(
         "find_schemes.html",
         results=results,
@@ -754,6 +885,14 @@ def scheme_detail(scheme_id):
         scheme_id=scheme.id,
     ).first()
 
+    user = get_current_user()
+    log_activity(
+        "scheme_view",
+        user_id=user.id if user else None,
+        description=f"Viewed scheme: {scheme.name} (#{scheme.id})",
+        ip_address=get_client_ip(),
+    )
+
     return render_template(
         "scheme_detail.html",
         scheme=scheme,
@@ -763,6 +902,7 @@ def scheme_detail(scheme_id):
         criteria_details=criteria_details,
         existing_application=existing_application,
     )
+
 
 
 # -------------------------------------------------------------------
@@ -838,16 +978,24 @@ def apply(scheme_id):
 
         db.session.commit()
 
+        user = get_current_user()
+        log_activity(
+            "application_created",
+            user_id=user.id if user else None,
+            description=f"Applied for {scheme.name} (#{scheme.id})",
+            ip_address=get_client_ip(),
+        )
+
         flash(
             "Application added to your WelfareConnect tracking.",
             "success",
         )
 
-    except Exception as exc:
+    except Exception:
         db.session.rollback()
 
         flash(
-            f"Unable to add application: {exc}",
+            "Unable to add application at this time. Please try again.",
             "error",
         )
 
@@ -901,8 +1049,9 @@ def my_applications():
 
 @main.post("/admin/scheme/create")
 def create_scheme():
-    if session.get("role") != "admin":
-        return redirect(url_for("main.login"))
+    guard = require_admin()
+    if guard:
+        return guard
 
     name = request.form.get("name", "").strip()
     category = request.form.get("category", "").strip()
@@ -987,6 +1136,15 @@ def create_scheme():
 
     db.session.commit()
 
+    admin_user = get_current_user()
+    ip = get_client_ip()
+    log_activity(
+        "scheme_published",
+        user_id=admin_user.id if admin_user else None,
+        description=f"Published scheme: {scheme.name}",
+        ip_address=ip,
+    )
+
     flash(
         f"Scheme published successfully. {notified} eligible user(s) notified.",
         "success",
@@ -1013,6 +1171,7 @@ def dashboard():
     )
 
     payload = analytics_payload(applications)
+    overview = admin_overview()
 
     total_logins = LoginLog.query.count()
 
@@ -1092,8 +1251,14 @@ def dashboard():
         total_logins=total_logins,
         unique_logins=unique_logins,
         user_login_rows=login_display_rows,
+        overview=overview,
+        registered_users=overview["registered_users"],
+        recent_activities=overview["recent_activities"],
+        event_counts=overview["event_counts"],
+        historical_note=overview["historical_distinction"]["note"],
         to_ist=to_ist,
     )
+
 
 
 # -------------------------------------------------------------------
@@ -1179,6 +1344,14 @@ def update_stage(application_id):
         )
 
         db.session.commit()
+
+        admin_user = get_current_user()
+        log_activity(
+            "application_stage_updated",
+            user_id=admin_user.id if admin_user else None,
+            description=f"Application #{application.id} ({application.scheme.name}) stage updated to {stage}",
+            ip_address=get_client_ip(),
+        )
 
         flash(
             f"Application updated to {stage}.",
@@ -1315,6 +1488,12 @@ def api_recommend():
 
 @main.get("/api/analytics")
 def api_analytics():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized. Authentication is required to access analytics data."}), 401
+    if user.role != "admin":
+        return jsonify({"error": "Forbidden. Administrator privileges required."}), 403
+
     return jsonify(
         analytics_payload(
             Application.query.all()

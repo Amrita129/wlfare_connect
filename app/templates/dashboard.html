@@ -19,6 +19,12 @@
 <div class="stat-grid admin-stats">
 
     <div class="stat-card">
+        <span>Registered Users</span>
+        <strong>{{ registered_users|length }}</strong>
+        <small>Active accounts</small>
+    </div>
+
+    <div class="stat-card">
         <span>Total Logins</span>
         <strong>{{ total_logins }}</strong>
         <small>Recorded sign-ins</small>
@@ -205,7 +211,59 @@
 
 </section>
 
-
+<!-- Registered Users Overview Section -->
+<section class="surface-card" style="margin-top: 24px;">
+    <div class="section-head">
+        <div>
+            <span class="eyebrow">USER MANAGEMENT</span>
+            <h2>Registered Citizen & Admin Accounts ({{ registered_users|length }})</h2>
+        </div>
+    </div>
+    <div class="table-wrap">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>User ID</th>
+                    <th>Full Name</th>
+                    <th>Account Identifier</th>
+                    <th>Role</th>
+                    <th>Registration Date</th>
+                    <th>Last Active</th>
+                    <th>Profile Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in registered_users %}
+                <tr>
+                    <td>#{{ u.id }}</td>
+                    <td><strong>{{ u.name }}</strong></td>
+                    <td><code>{{ u.email }}</code></td>
+                    <td>
+                        <span class="role-pill">{{ u.role }}</span>
+                    </td>
+                    <td>
+                        {{ to_ist(u.created_at).strftime('%d %b %Y · %I:%M %p') if u.created_at else '—' }}
+                    </td>
+                    <td>
+                        {{ to_ist(u.last_login).strftime('%d %b %Y · %I:%M %p') if u.last_login else 'No record' }}
+                    </td>
+                    <td>
+                        {% if u.has_profile %}
+                        <span class="badge-rate" style="background:#e0e7ff;color:#3730a3;font-size:0.75rem;">Linked Profile</span>
+                        {% else %}
+                        <span style="color:#64748b;font-size:0.75rem;">Admin / Unlinked</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center">No registered accounts found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
 
 <section class="surface-card" id="applications">
 
@@ -301,6 +359,74 @@
 
 </section>
 
+<!-- User Engagement & Activity Tracking Section -->
+<section class="surface-card" style="margin-top: 24px;">
+    <div class="section-head">
+        <div>
+            <span class="eyebrow">INTERACTION & AUDIT METRICS</span>
+            <h2>Recorded User Engagement & System Activity</h2>
+        </div>
+    </div>
+
+    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:0.875rem; color:#475569;">
+        ℹ️ <strong>Data Source Distinction:</strong> {{ historical_note }}
+    </div>
+
+    <div class="stat-grid" style="margin-bottom: 20px;">
+        <div class="stat-card">
+            <span>Scheme Searches</span>
+            <strong>{{ event_counts.get('scheme_search', 0) }}</strong>
+            <small>Active user searches</small>
+        </div>
+        <div class="stat-card">
+            <span>Scheme Views</span>
+            <strong>{{ event_counts.get('scheme_view', 0) }}</strong>
+            <small>Detail inspections</small>
+        </div>
+        <div class="stat-card">
+            <span>Applications Created</span>
+            <strong>{{ event_counts.get('application_created', 0) }}</strong>
+            <small>Citizen submissions</small>
+        </div>
+        <div class="stat-card">
+            <span>Successful Logins</span>
+            <strong>{{ event_counts.get('login_success', total_logins) }}</strong>
+            <small>Authenticated sessions</small>
+        </div>
+        <div class="stat-card">
+            <span>Failed Logins</span>
+            <strong>{{ event_counts.get('login_failure', 0) }}</strong>
+            <small>Throttled / rejected</small>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table class="modern-table compact">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Actor</th>
+                    <th>Event Type</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for act in recent_activities %}
+                <tr>
+                    <td>{{ to_ist(act.created_at).strftime('%d %b %Y · %I:%M:%S %p') if act.created_at else '—' }}</td>
+                    <td><strong>{{ act.user_label }}</strong></td>
+                    <td><span class="role-pill">{{ act.event_type }}</span></td>
+                    <td>{{ act.description }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center">No recent interaction events logged yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
 
 <!-- ================================
      PUBLISH NEW SCHEME

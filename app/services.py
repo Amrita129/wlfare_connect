@@ -1,3 +1,5 @@
+import json
+from sqlalchemy import func
 from .models import STAGES
 
 
@@ -912,4 +914,135 @@ def analytics_payload(applications):
         "demographic_flags": demographic_flags,
         "charts": charts,
         "total_applications": len(applications),
+    }
+
+
+def log_activity(event_type, user_id=None, description=None, metadata=None, ip_address=None):
+    """Safely log an activity event into the database."""
+    try:
+        from . import db
+        from .models import ActivityLog
+        meta_str = None
+        if metadata is not None:
+            if isinstance(metadata, (dict, list)):
+                meta_str = json.dumps(metadata)
+            else:
+                meta_str = str(metadata)
+
+        log = ActivityLog(
+            user_id=user_id,
+            event_type=event_type,
+            description=description,
+            metadata_json=meta_str,
+            ip_address=ip_address,
+        )
+        db.session.add(log)
+        db.session.commit()
+    except Exception as exc:
+        try:
+            from . import db
+            db.session.rollback()
+        except Exception:
+            pass
+
+
+def admin_overview():
+    """
+    Generate comprehensive admin metrics from actual database records:
+    - Registered user accounts with last login information (no password hashes exposed).
+    - Schemes overview and status counts.
+    - Application overview by stage.
+    - User engagement and interaction events.
+    - Explicit distinction between historical records and newly tracked activity events.
+    """
+    from . import db
+    from .models import User, Scheme, Application, LoginLog, ActivityLog, STAGES
+
+    # 1. Registered Users Overview
+    users = User.query.order_by(User.created_at.desc()).all()
+    user_rows = []
+    for u in users:
+        last_login_record = (
+            LoginLog.query.filter_by(username=u.email)
+            .order_by(LoginLog.logged_in_at.desc())
+            .first()
+        )
+        last_login_dt = last_login_record.logged_in_at if last_login_record else None
+
+        user_rows.append({
+            "id": u.id,
+            "name": u.name,
+            "email": u.email,
+            "role": u.role,
+            "created_at": u.created_at,
+            "last_login": last_login_dt,
+            "has_profile": u.citizen_id is not None,
+        })
+
+    # 2. Scheme Overview
+    total_schemes = Scheme.query.count()
+    active_schemes = Scheme.query.filter_by(active=True).count()
+    inactive_schemes = total_schemes - active_schemes
+    categories_raw = (
+        db.session.query(Scheme.category, func.count(Scheme.id))
+        .group_by(Scheme.category)
+        .all()
+    )
+    categories_count = {cat: count for cat, count in categories_raw if cat}
+
+    # 3. Application Overview
+    total_applications = Application.query.count()
+    app_stage_counts = {stage: 0 for stage in STAGES}
+    stage_counts_raw = (
+        db.session.query(Application.stage, func.count(Application.id))
+        .group_by(Application.stage)
+        .all()
+    )
+    for st, count in stage_counts_raw:
+        app_stage_counts[st] = count
+
+    # 4. User Engagement & Activity Logs
+    recent_activities = (
+        ActivityLog.query.order_by(ActivityLog.created_at.desc())
+        .limit(25)
+        .all()
+    )
+    activity_rows = []
+    for act in recent_activities:
+        user_label = act.user.name if act.user else "Anonymous / Guest"
+        activity_rows.append({
+            "id": act.id,
+            "user_label": user_label,
+            "event_type": act.event_type,
+            "description": act.description or "",
+            "ip_address": act.ip_address,
+            "created_at": act.created_at,
+        })
+
+    # Aggregated interaction counts
+    event_counts_raw = (
+        db.session.query(ActivityLog.event_type, func.count(ActivityLog.id))
+        .group_by(ActivityLog.event_type)
+        .all()
+    )
+    event_counts = {evt: count for evt, count in event_counts_raw}
+
+    return {
+        "registered_users": user_rows,
+        "total_users": len(user_rows),
+        "total_schemes": total_schemes,
+        "active_schemes": active_schemes,
+        "inactive_schemes": inactive_schemes,
+        "categories_count": categories_count,
+        "total_applications": total_applications,
+        "application_stage_counts": app_stage_counts,
+        "recent_activities": activity_rows,
+        "event_counts": event_counts,
+        "historical_distinction": {
+            "historical_data_available": True,
+            "note": (
+                "Registered users, applications, and historical login entries are derived from existing database records. "
+                "Granular user interaction metrics (scheme searches, detail views, failed attempts) are actively tracked from when activity logging was introduced."
+            )
+        }
     }
